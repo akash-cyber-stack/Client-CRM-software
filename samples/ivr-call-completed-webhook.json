@@ -1,0 +1,13 @@
+{
+  "call_id": "crm-call-uuid-001",
+  "ivr_provider_call_id": "IVR-PROVIDER-98765",
+  "ivr_agent_id": "AGT001",
+  "customer_phone": "9123456780",
+  "call_type": "outgoing",
+  "call_status": "answered",
+  "call_start_time": "2026-05-21T10:30:00.000Z",
+  "call_end_time": "2026-05-21T10:32:45.000Z",
+  "call_duration": 165,
+  "recording_url": "https://your-ivr-provider.com/recordings/IVR-PROVIDER-98765.mp3",
+  "notes": "Customer confirmed site visit for Saturday"
+}

@@ -1,0 +1,11 @@
+{
+  "full_name": "John Doe",
+  "phone_number": "+91 98765 43210",
+  "email": "john.doe@example.com",
+  "city": "Bangalore",
+  "message": "Interested in 3BHK apartment in Whitefield",
+  "campaign_name": "Google Search - Real Estate Q2",
+  "ad_set_name": "Apartment Buyers",
+  "ad_name": "3BHK Whitefield Ad",
+  "form_name": "Lead Form - Contact Us"
+}

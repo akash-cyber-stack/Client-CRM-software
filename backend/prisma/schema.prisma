@@ -1,0 +1,264 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  MANAGER
+  SALES_EMPLOYEE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LeadSource {
+  GOOGLE_ADS
+  META_ADS
+  MANUAL
+}
+
+enum LeadStatus {
+  NEW
+  ASSIGNED
+  CONTACTED
+  INTERESTED
+  FOLLOW_UP
+  CONVERTED
+  NOT_INTERESTED
+  LOST
+}
+
+enum CallType {
+  INCOMING
+  OUTGOING
+  MISSED
+}
+
+enum CallStatus {
+  ANSWERED
+  MISSED
+  FAILED
+  BUSY
+}
+
+enum AssignmentMethod {
+  ROUND_ROBIN
+  MANUAL
+}
+
+enum NotificationType {
+  LEAD_ASSIGNED
+  FOLLOW_UP_REMINDER
+  MISSED_FOLLOW_UP
+  CALL_RECORDING
+  DUPLICATE_LEAD
+}
+
+enum ActivityType {
+  LEAD_CREATED
+  LEAD_ASSIGNED
+  STATUS_CHANGED
+  NOTE_ADDED
+  CALL_MADE
+  FOLLOW_UP_SET
+  DUPLICATE_SOURCE
+  CAMPAIGN_UPDATE
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  name          String
+  phone         String?
+  role          UserRole       @default(SALES_EMPLOYEE)
+  department    String?
+  ivrAgentId    String?        @map("ivr_agent_id")
+  ivrExtension  String?        @map("ivr_extension")
+  status        EmployeeStatus @default(ACTIVE)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  assignedLeads Lead[]         @relation("AssignedEmployee")
+  callLogs      CallLog[]
+  followUps     FollowUp[]
+  notes         Note[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Lead {
+  id               String     @id @default(uuid())
+  leadNumber       Int        @unique @default(autoincrement()) @map("lead_number")
+  customerName     String     @map("customer_name")
+  phone            String
+  email            String?
+  city             String?
+  requirement      String?
+  source           LeadSource @default(MANUAL)
+  campaignName     String?    @map("campaign_name")
+  adSetName        String?    @map("ad_set_name")
+  adName           String?    @map("ad_name")
+  formName         String?    @map("form_name")
+  status           LeadStatus @default(NEW)
+  assignedToId     String?    @map("assigned_to_id")
+  followUpDate     DateTime?  @map("follow_up_date")
+  remarks          String?
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  assignedTo   User?          @relation("AssignedEmployee", fields: [assignedToId], references: [id])
+  callLogs     CallLog[]
+  followUps    FollowUp[]
+  notes        Note[]
+  activities   LeadActivity[]
+  campaign     Campaign?      @relation(fields: [campaignId], references: [id])
+  campaignId   String?        @map("campaign_id")
+
+  @@index([phone])
+  @@index([email])
+  @@index([status])
+  @@index([source])
+  @@index([assignedToId])
+  @@map("leads")
+}
+
+model Campaign {
+  id        String   @id @default(uuid())
+  name      String
+  source    LeadSource
+  adSetName String?  @map("ad_set_name")
+  adName    String?  @map("ad_name")
+  formName  String?  @map("form_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  leads Lead[]
+
+  @@unique([name, source])
+  @@map("campaigns")
+}
+
+model CallLog {
+  id              String     @id @default(uuid())
+  leadId          String?    @map("lead_id")
+  employeeId      String?    @map("employee_id")
+  customerPhone   String     @map("customer_phone")
+  ivrAgentId      String?    @map("ivr_agent_id")
+  callType        CallType   @map("call_type")
+  callStatus      CallStatus @map("call_status")
+  callStartTime   DateTime   @map("call_start_time")
+  callEndTime     DateTime?  @map("call_end_time")
+  durationSeconds Int        @default(0) @map("duration_seconds")
+  recordingUrl    String?    @map("recording_url")
+  ivrProviderCallId String?  @map("ivr_provider_call_id")
+  notes           String?
+  isLinked        Boolean    @default(true) @map("is_linked")
+  createdAt       DateTime   @default(now()) @map("created_at")
+
+  lead     Lead? @relation(fields: [leadId], references: [id])
+  employee User? @relation(fields: [employeeId], references: [id])
+
+  @@index([customerPhone])
+  @@index([employeeId])
+  @@index([leadId])
+  @@map("call_logs")
+}
+
+model FollowUp {
+  id          String   @id @default(uuid())
+  leadId      String   @map("lead_id")
+  employeeId  String   @map("employee_id")
+  scheduledAt DateTime @map("scheduled_at")
+  remarks     String?
+  isCompleted Boolean  @default(false) @map("is_completed")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  lead     Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  employee User @relation(fields: [employeeId], references: [id])
+
+  @@index([scheduledAt])
+  @@index([employeeId])
+  @@map("follow_ups")
+}
+
+model Note {
+  id         String   @id @default(uuid())
+  leadId     String   @map("lead_id")
+  authorId   String   @map("author_id")
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@map("notes")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  leadId    String?          @map("lead_id")
+  callId    String?          @map("call_id")
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model LeadActivity {
+  id          String       @id @default(uuid())
+  leadId      String       @map("lead_id")
+  type        ActivityType
+  description String
+  metadata    Json?
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_activities")
+}
+
+model WebhookLog {
+  id        String   @id @default(uuid())
+  provider  String
+  payload   Json
+  status    String
+  message   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("webhook_logs")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// Tracks round-robin pointer
+model LeadAssignmentState {
+  id              String @id @default("default")
+  lastEmployeeId  String? @map("last_employee_id")
+
+  @@map("lead_assignment_state")
+}

@@ -1,0 +1,96 @@
+import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useLayout } from '../context/LayoutContext';
+
+const navItems = [
+  { to: '/', label: 'Dashboard', icon: '📊' },
+  { to: '/leads', label: 'Leads', icon: '👥' },
+  { to: '/employees', label: 'Employees', icon: '👔', adminOnly: true },
+  { to: '/calls', label: 'Call History', icon: '📞' },
+  { to: '/follow-ups', label: 'Follow-ups', icon: '📅' },
+  { to: '/reports', label: 'Reports', icon: '📈' },
+  { to: '/settings', label: 'Settings', icon: '⚙️', adminOnly: true },
+];
+
+export default function Sidebar() {
+  const { user, isAdmin } = useAuth();
+  const { sidebarOpen, closeSidebar } = useLayout();
+
+  const handleNavClick = () => {
+    if (window.innerWidth < 1024) closeSidebar();
+  };
+
+  return (
+    <>
+      {/* Backdrop — mobile only (desktop pushes content, no overlay) */}
+      <div
+        className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${
+          sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        } bg-black/60`}
+        onClick={closeSidebar}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={`fixed left-0 top-0 z-50 lg:z-30 h-full w-[min(85vw,280px)] sm:w-72 lg:w-64 flex flex-col border-r border-default shadow-2xl lg:shadow-none transition-transform duration-300 ease-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ backgroundColor: 'var(--sidebar-bg)' }}
+        aria-hidden={!sidebarOpen}
+      >
+        <div className="p-4 sm:p-5 border-b border-default flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-primary-600 flex items-center justify-center text-white font-bold shadow-lg shadow-primary-600/30">
+              SL
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-main truncate">Sales Lead CRM</h1>
+              <p className="text-xs text-muted truncate">Lead & Call Management</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-main shrink-0"
+            style={{ backgroundColor: 'var(--surface-hover)' }}
+            onClick={closeSidebar}
+            aria-label="Close menu"
+            title="Close sidebar"
+          >
+            ✕
+          </button>
+        </div>
+
+        <nav className="flex-1 p-3 sm:p-4 space-y-1 overflow-y-auto">
+          {navItems.map((item) => {
+            if (item.adminOnly && !isAdmin) return null;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
+                      : 'text-muted hover:text-main hover:bg-[var(--surface-hover)]'
+                  }`
+                }
+              >
+                <span className="text-base shrink-0">{item.icon}</span>
+                <span className="truncate">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        <div className="p-3 sm:p-4 border-t border-default safe-bottom shrink-0">
+          <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--surface-hover)' }}>
+            <p className="font-medium text-sm text-main truncate">{user?.name}</p>
+            <p className="text-muted text-xs truncate mt-0.5">{user?.role?.replace(/_/g, ' ')}</p>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
