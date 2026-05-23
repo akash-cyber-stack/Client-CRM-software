@@ -120,7 +120,14 @@ export const employeeReport = asyncHandler(async (req, res) => {
       status: true,
       assignedLeads: {
         where: dateF,
-        select: { id: true, status: true, source: true, createdAt: true },
+        select: {
+          id: true,
+          customerName: true,
+          phone: true,
+          status: true,
+          source: true,
+          createdAt: true,
+        },
       },
       callLogs: {
         where: req.query.fromDate

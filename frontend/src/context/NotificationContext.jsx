@@ -21,9 +21,18 @@ export function NotificationProvider({ children }) {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [toasts, setToasts] = useState([]);
   const lastPollRef = useRef(new Date().toISOString());
   const seenIdsRef = useRef(new Set());
+
+  const loadUnread = useCallback(async () => {
+    const allRes = await notificationsApi.list({ limit: 50, unread: 'true' });
+    const unread = allRes.data.data || [];
+    setNotifications(unread);
+    setUnreadCount(unread.length);
+    return unread;
+  }, []);
 
   const handleNotificationClick = useCallback(
     async (n) => {
@@ -32,9 +41,7 @@ export function NotificationProvider({ children }) {
       } catch {
         /* ignore */
       }
-      setNotifications((prev) =>
-        prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x))
-      );
+      setNotifications((prev) => prev.filter((x) => x.id !== n.id));
       setUnreadCount((c) => Math.max(0, c - (n.isRead ? 0 : 1)));
       const path = n.path || '/';
       navigate(path);
@@ -66,38 +73,51 @@ export function NotificationProvider({ children }) {
           ]);
         }
       });
+
+      setNotifications((prev) => {
+        const ids = new Set(prev.map((x) => x.id));
+        const merged = [...prev];
+        fresh.forEach((n) => {
+          if (!ids.has(n.id)) merged.unshift(n);
+        });
+        return merged;
+      });
+      setUnreadCount((c) => c + fresh.length);
     },
     [handleNotificationClick]
   );
 
-  const refresh = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await notificationsApi.poll({ since: lastPollRef.current });
-      const { notifications: list, unreadCount: count } = res.data.data;
-      lastPollRef.current = new Date().toISOString();
+  const refresh = useCallback(
+    async (options = {}) => {
+      if (!user) return;
+      const { showLoading = false } = options;
+      if (showLoading) setRefreshing(true);
+      try {
+        const res = await notificationsApi.poll({ since: lastPollRef.current });
+        const { notifications: polled, unreadCount: count } = res.data.data;
+        lastPollRef.current = new Date().toISOString();
 
-      if (list?.length) alertNew(list);
+        if (polled?.length) alertNew(polled);
 
-      const allRes = await notificationsApi.list({ limit: 50 });
-      const enriched = allRes.data.data || [];
-      setNotifications(enriched);
-      setUnreadCount(count ?? enriched.filter((n) => !n.isRead).length);
-    } catch {
-      /* silent */
-    }
-  }, [user, alertNew]);
+        const unread = await loadUnread();
+        if (typeof count === 'number') setUnreadCount(count);
+        else setUnreadCount(unread.length);
+      } catch {
+        /* silent */
+      } finally {
+        if (showLoading) setRefreshing(false);
+      }
+    },
+    [user, alertNew, loadUnread]
+  );
 
   useEffect(() => {
     if (!user) return undefined;
 
     const init = async () => {
       try {
-        const allRes = await notificationsApi.list({ limit: 50 });
-        const enriched = allRes.data.data || [];
-        enriched.forEach((n) => seenIdsRef.current.add(n.id));
-        setNotifications(enriched);
-        setUnreadCount(enriched.filter((n) => !n.isRead).length);
+        const unread = await loadUnread();
+        unread.forEach((n) => seenIdsRef.current.add(n.id));
         lastPollRef.current = new Date().toISOString();
       } catch {
         /* ignore */
@@ -107,13 +127,13 @@ export function NotificationProvider({ children }) {
 
     const prefs = getNotificationPrefs();
     const ms = Math.max(15, prefs.pollIntervalSec || 30) * 1000;
-    const id = setInterval(refresh, ms);
+    const id = setInterval(() => refresh(), ms);
     return () => clearInterval(id);
-  }, [user, refresh]);
+  }, [user, refresh, loadUnread]);
 
   const markAllRead = async () => {
     await notificationsApi.readAll();
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setNotifications([]);
     setUnreadCount(0);
   };
 
@@ -126,6 +146,7 @@ export function NotificationProvider({ children }) {
       value={{
         notifications,
         unreadCount,
+        refreshing,
         refresh,
         markAllRead,
         handleNotificationClick,

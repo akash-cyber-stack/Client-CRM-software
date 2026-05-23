@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Link, useNavigate } from 'react-router-dom';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { reportsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import StatCard from '../components/StatCard';
+import EmployeePerformanceChart from '../components/EmployeePerformanceChart';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PageHeader from '../components/PageHeader';
 import { useTheme } from '../context/ThemeContext';
@@ -13,6 +14,7 @@ const COLORS = ['#3b82f6', '#8b5cf6', '#10b981'];
 
 export default function Dashboard() {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const { isDark } = useTheme();
   const chartTick = isDark ? '#94a3b8' : '#64748b';
   const tooltipStyle = {
@@ -34,6 +36,7 @@ export default function Dashboard() {
   const sourceData = (data.sourceBreakdown || []).map((s) => ({
     name: SOURCE_LABELS[s.source] || s.source,
     value: s.count,
+    source: s.source,
   }));
 
   const statCards = [
@@ -66,40 +69,45 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {sourceData.length > 0 && (
-          <Link to="/leads" className="card block hover:border-primary-500/40 transition-all active:scale-[0.99] no-underline">
+          <div className="card">
             <h2 className="font-semibold mb-2 text-main">Leads by Source</h2>
-            <p className="text-xs text-primary-500 mb-4">Tap to view all leads →</p>
-            <div className="w-full h-[200px] sm:h-[220px]">
+            <p className="text-xs text-muted mb-4">Tap a slice to filter leads by source</p>
+            <div className="w-full h-[200px] sm:h-[220px] cursor-pointer">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={sourceData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="70%" label>
+                  <Pie
+                    data={sourceData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius="70%"
+                    label
+                    onClick={(_, index) => {
+                      const slice = sourceData[index];
+                      if (slice?.source) navigate(`/leads?source=${slice.source}`);
+                    }}
+                  >
                     {sourceData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} className="cursor-pointer" />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={tooltipStyle} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </Link>
+            <button type="button" className="text-xs text-primary-500 mt-3 hover:underline" onClick={() => navigate('/leads')}>
+              View all leads →
+            </button>
+          </div>
         )}
 
         {isAdmin && data.employeePerformance?.length > 0 && (
-          <Link to="/employees" className="card block hover:border-primary-500/40 transition-all active:scale-[0.99] no-underline">
-            <h2 className="font-semibold mb-2 text-main">Employee Performance</h2>
-            <p className="text-xs text-primary-500 mb-4">Tap to view employees →</p>
-            <div className="w-full h-[200px] sm:h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.employeePerformance}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: chartTick }} interval={0} angle={-20} textAnchor="end" height={50} />
-                  <YAxis tick={{ fill: chartTick, fontSize: 11 }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="leads" fill="#3b82f6" name="Leads" />
-                  <Bar dataKey="calls" fill="#8b5cf6" name="Calls" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Link>
+          <EmployeePerformanceChart
+            data={data.employeePerformance}
+            chartTick={chartTick}
+            tooltipStyle={tooltipStyle}
+          />
         )}
 
         {data.campaignBreakdown?.length > 0 && (

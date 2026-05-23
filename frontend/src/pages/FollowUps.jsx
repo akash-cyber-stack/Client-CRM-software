@@ -50,18 +50,23 @@ export default function FollowUps() {
 
       {dashboard && (
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="card text-center">
-            <p className="text-2xl font-bold text-primary-600">{dashboard.today}</p>
-            <p className="text-sm text-muted">Today</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-2xl font-bold text-amber-600">{dashboard.pending}</p>
-            <p className="text-sm text-muted">Pending</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-2xl font-bold text-red-600">{dashboard.missed}</p>
-            <p className="text-sm text-muted">Missed</p>
-          </div>
+          {[
+            { key: 'today', count: dashboard.today, label: 'Today', color: 'text-primary-600' },
+            { key: 'pending', count: dashboard.pending, label: 'Pending', color: 'text-amber-600' },
+            { key: 'missed', count: dashboard.missed, label: 'Missed', color: 'text-red-600' },
+          ].map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setSearchParams({ type: item.key })}
+              className={`card text-center w-full transition-all hover:border-primary-500/50 active:scale-[0.98] ${
+                type === item.key ? 'ring-2 ring-primary-500 border-primary-500/50' : ''
+              }`}
+            >
+              <p className={`text-2xl font-bold ${item.color}`}>{item.count}</p>
+              <p className="text-sm text-muted">{item.label}</p>
+            </button>
+          ))}
         </div>
       )}
 

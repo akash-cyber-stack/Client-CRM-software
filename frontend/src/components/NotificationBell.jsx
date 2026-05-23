@@ -16,6 +16,7 @@ export default function NotificationBell() {
   const {
     notifications,
     unreadCount,
+    refreshing,
     markAllRead,
     handleNotificationClick,
     refresh,
@@ -26,6 +27,8 @@ export default function NotificationBell() {
     setOpen(false);
     handleNotificationClick(n);
   };
+
+  const onRefresh = () => refresh({ showLoading: true });
 
   return (
     <div className="relative">
@@ -58,13 +61,18 @@ export default function NotificationBell() {
                 <h3 className="font-semibold text-main">Notifications</h3>
                 <p className="text-xs text-muted">{unreadCount} unread</p>
               </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => refresh()} className="text-xs text-primary-500 hover:underline">
-                  Refresh
+              <div className="flex gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  disabled={refreshing}
+                  className="text-xs text-primary-500 hover:underline disabled:opacity-50"
+                >
+                  {refreshing ? 'Refreshing…' : 'Refresh'}
                 </button>
                 {unreadCount > 0 && (
                   <button type="button" onClick={markAllRead} className="text-xs text-muted hover:text-main">
-                    Mark all read
+                    Clear all
                   </button>
                 )}
               </div>
@@ -72,16 +80,14 @@ export default function NotificationBell() {
 
             <div className="overflow-y-auto flex-1">
               {notifications.length === 0 ? (
-                <p className="p-8 text-center text-muted text-sm">No notifications yet</p>
+                <p className="p-8 text-center text-muted text-sm">No new notifications</p>
               ) : (
                 notifications.map((n) => (
                   <button
                     key={n.id}
                     type="button"
                     onClick={() => onItemClick(n)}
-                    className={`w-full text-left p-4 border-b border-default transition-colors hover:opacity-90 ${
-                      !n.isRead ? 'bg-primary-600/10 border-l-2 border-l-primary-500' : ''
-                    }`}
+                    className="w-full text-left p-4 border-b border-default transition-colors hover:bg-[var(--surface-hover)] bg-primary-600/10 border-l-2 border-l-primary-500"
                   >
                     <div className="flex gap-3">
                       <span className="text-xl">{typeIcons[n.type] || '🔔'}</span>
@@ -95,9 +101,7 @@ export default function NotificationBell() {
                         <p className="text-muted text-xs mt-1">{n.message}</p>
                         <p className="text-subtle text-[10px] mt-1">{formatDate(n.createdAt)}</p>
                       </div>
-                      {!n.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0 mt-1" />
-                      )}
+                      <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0 mt-1" />
                     </div>
                   </button>
                 ))
