@@ -84,8 +84,12 @@ export const createLead = asyncHandler(async (req, res) => {
   if (body.assignedToId) {
     await logActivity(lead.id, 'LEAD_ASSIGNED', 'Lead assigned on creation');
   } else if (req.body.autoAssign !== false) {
-    const { autoAssignLead } = await import('../services/assignmentService.js');
-    await autoAssignLead(lead.id);
+    try {
+      const { autoAssignLead } = await import('../services/assignmentService.js');
+      await autoAssignLead(lead.id);
+    } catch (assignErr) {
+      console.warn('[createLead] auto-assign skipped:', assignErr.message);
+    }
   }
 
   const updated = await prisma.lead.findUnique({

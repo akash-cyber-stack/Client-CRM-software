@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { leadsApi, employeesApi, callsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { getApiErrorMessage } from '../utils/apiError';
 import StatusBadge from '../components/StatusBadge';
 import AudioPlayer from '../components/AudioPlayer';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -10,6 +12,7 @@ import { LEAD_STATUSES, SOURCE_LABELS, formatDate, formatDuration } from '../uti
 export default function LeadDetail() {
   const { id } = useParams();
   const { isAdmin, user } = useAuth();
+  const toast = useToast();
   const [lead, setLead] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [note, setNote] = useState('');
@@ -27,25 +30,53 @@ export default function LeadDetail() {
 
   const handleNote = async () => {
     if (!note.trim()) return;
-    await leadsApi.addNote(id, note);
-    setNote('');
-    load();
+    try {
+      await leadsApi.addNote(id, note);
+      setNote('');
+      toast.success('Note added');
+      load();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to add note'));
+    }
   };
 
   const handleFollowUp = async () => {
-    await leadsApi.addFollowUp(id, followUp);
-    setFollowUp({ scheduledAt: '', remarks: '' });
-    load();
+    if (!followUp.scheduledAt) {
+      toast.error('Select follow-up date & time');
+      return;
+    }
+    try {
+      await leadsApi.addFollowUp(id, followUp);
+      setFollowUp({ scheduledAt: '', remarks: '' });
+      toast.success('Follow-up scheduled');
+      load();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to schedule follow-up'));
+    }
   };
 
   const handleAssign = async () => {
-    await leadsApi.assign(id, assignId);
-    load();
+    if (!assignId) {
+      toast.error('Select an employee');
+      return;
+    }
+    try {
+      await leadsApi.assign(id, assignId);
+      toast.success('Lead assigned');
+      load();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Assign failed'));
+    }
   };
 
   const handleStatus = async (status) => {
-    await leadsApi.update(id, { status });
-    load();
+    try {
+      await leadsApi.update(id, { status });
+      toast.success('Status updated');
+      load();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Update failed'));
+    }
   };
 
   const handleCall = async () => {

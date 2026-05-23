@@ -15,6 +15,7 @@ export function resolveApiUrl() {
 const client = axios.create({
   baseURL: resolveApiUrl(),
   headers: { 'Content-Type': 'application/json' },
+  timeout: 30000,
 });
 
 client.interceptors.request.use((config) => {

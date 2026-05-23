@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { followUpsApi } from '../api';
+import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { getApiErrorMessage } from '../utils/apiError';
 import { formatDate } from '../utils/constants';
 
 const TABS = [
@@ -11,6 +13,7 @@ const TABS = [
 ];
 
 export default function FollowUps() {
+  const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const type = searchParams.get('type') || 'today';
   const [followUps, setFollowUps] = useState([]);
@@ -22,15 +25,23 @@ export default function FollowUps() {
     Promise.all([
       followUpsApi.list({ type }),
       followUpsApi.dashboard(),
-    ]).then(([listRes, dashRes]) => {
-      setFollowUps(listRes.data.data);
-      setDashboard(dashRes.data.data);
-    }).finally(() => setLoading(false));
+    ])
+      .then(([listRes, dashRes]) => {
+        setFollowUps(listRes.data.data);
+        setDashboard(dashRes.data.data);
+      })
+      .catch((err) => toast.error(getApiErrorMessage(err, 'Failed to load follow-ups')))
+      .finally(() => setLoading(false));
   }, [type]);
 
   const complete = async (id) => {
-    await followUpsApi.complete(id);
-    setFollowUps((prev) => prev.filter((f) => f.id !== id));
+    try {
+      await followUpsApi.complete(id);
+      setFollowUps((prev) => prev.filter((f) => f.id !== id));
+      toast.success('Follow-up completed');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Could not complete'));
+    }
   };
 
   return (

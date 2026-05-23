@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { employeesApi } from '../api';
+import { useToast } from '../context/ToastContext';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { getApiErrorMessage } from '../utils/apiError';
 import { ROLES } from '../utils/constants';
 
 const emptyForm = {
@@ -10,15 +12,25 @@ const emptyForm = {
 };
 
 export default function Employees() {
+  const toast = useToast();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
-  const load = () => {
+  const load = async () => {
     setLoading(true);
-    employeesApi.list().then((res) => setEmployees(res.data.data)).finally(() => setLoading(false));
+    try {
+      const res = await employeesApi.list();
+      setEmployees(res.data.data || []);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to load employees'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -41,18 +53,38 @@ export default function Employees() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = { ...form };
-    if (!data.password) delete data.password;
-    if (editId) await employeesApi.update(editId, data);
-    else await employeesApi.create(data);
-    setModalOpen(false);
-    load();
+    setSaving(true);
+    setFormError('');
+    try {
+      const data = { ...form };
+      if (!data.password) delete data.password;
+      if (editId) {
+        await employeesApi.update(editId, data);
+        toast.success('Employee updated');
+      } else {
+        await employeesApi.create(data);
+        toast.success('Employee created');
+      }
+      setModalOpen(false);
+      await load();
+    } catch (err) {
+      const msg = getApiErrorMessage(err, 'Save failed');
+      setFormError(msg);
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this employee?')) return;
-    await employeesApi.remove(id);
-    load();
+    try {
+      await employeesApi.remove(id);
+      toast.success('Employee deleted');
+      load();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Delete failed'));
+    }
   };
 
   return (
@@ -106,7 +138,8 @@ export default function Employees() {
         </div>
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editId ? 'Edit Employee' : 'Add Employee'} size="lg">
+      <Modal open={modalOpen} onClose={() => !saving && setModalOpen(false)} title={editId ? 'Edit Employee' : 'Add Employee'} size="lg">
+        {formError && <div className="alert-error mb-4">{formError}</div>}
         <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3">
           <input className="input col-span-2" placeholder="Name *" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <input className="input" placeholder="Email *" required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
@@ -122,7 +155,9 @@ export default function Employees() {
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>
           </select>
-          <button type="submit" className="btn-primary col-span-2">{editId ? 'Update' : 'Create'}</button>
+          <button type="submit" className="btn-primary col-span-2" disabled={saving}>
+            {saving ? 'Saving...' : editId ? 'Update' : 'Create'}
+          </button>
         </form>
       </Modal>
     </div>
