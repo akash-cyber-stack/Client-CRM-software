@@ -88,6 +88,9 @@ export default function Sidebar() {
           <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--surface-hover)' }}>
             <p className="font-medium text-sm text-main truncate">{user?.name}</p>
             <p className="text-muted text-xs truncate mt-0.5">{user?.role?.replace(/_/g, ' ')}</p>
+            {typeof __APP_BUILD_ID__ !== 'undefined' && __APP_BUILD_ID__ !== 'local' && (
+              <p className="text-[10px] text-subtle mt-1 font-mono">build {__APP_BUILD_ID__}</p>
+            )}
           </div>
         </div>
       </aside>
