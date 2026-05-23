@@ -1,0 +1,12 @@
+# Copy to scripts/vercel-env.local (gitignored) — paste your Neon + secrets, then run:
+#   powershell -File scripts/push-vercel-env.ps1
+
+DATABASE_URL=postgresql://USER:PASSWORD@ep-xxxx.region.aws.neon.tech/neondb?sslmode=require
+JWT_SECRET=change-this-to-a-long-random-string
+JWT_EXPIRES_IN=7d
+NODE_ENV=production
+FRONTEND_URL=https://ar-crm-iota-pi.vercel.app
+GOOGLE_WEBHOOK_SECRET=google-secret-demo
+META_WEBHOOK_VERIFY_TOKEN=meta-verify-token-demo
+META_WEBHOOK_SECRET=meta-secret-demo
+IVR_WEBHOOK_SECRET=ivr-secret-demo

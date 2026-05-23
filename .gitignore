@@ -10,4 +10,5 @@ backend/prisma/*.db-journal
 .DS_Store
 backend/prisma/migrations/
 .vercel
+scripts/vercel-env.local
 .history/

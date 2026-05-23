@@ -1,5 +1,25 @@
 # Vercel — required environment variables
 
+## Login error: `Environment variable not found: DATABASE_URL`
+
+Project **ar-crm-iota** (`ar-crm-iota-pi.vercel.app`) has **no env vars** yet. Fix:
+
+1. [Neon Console](https://console.neon.tech) → your project → **Connect** → copy **Pooled** connection string.
+2. Vercel → [ar-crm-iota Settings → Environment Variables](https://vercel.com/akashpandeyweconnect-6582s-projects/ar-crm-iota/settings/environment-variables)
+3. Add every variable in the table below (Production **and** Preview).
+4. **Deployments** → latest → **⋯** → **Redeploy** (required after adding env).
+
+**Tip:** If `ar-crm-iota.vercel.app` worked before, open that **old** Vercel project → Settings → Environment Variables → copy `DATABASE_URL` and paste into **ar-crm-iota**.
+
+**CLI (optional):** copy `scripts/vercel-env.example` → `scripts/vercel-env.local`, fill values, then:
+
+```powershell
+powershell -File scripts/push-vercel-env.ps1
+npx vercel deploy --prod
+```
+
+---
+
 Add **all** of these in Vercel → Settings → Environment Variables (Production + Preview):
 
 | Key | Value |
@@ -8,7 +28,7 @@ Add **all** of these in Vercel → Settings → Environment Variables (Productio
 | `JWT_SECRET` | e.g. `crm-jwt-secret-change-this-2026` |
 | `JWT_EXPIRES_IN` | `7d` |
 | `NODE_ENV` | `production` |
-| `FRONTEND_URL` | `https://ar-crm-iota.vercel.app` (or your active production URL) |
+| `FRONTEND_URL` | `https://ar-crm-iota-pi.vercel.app` |
 | `GOOGLE_WEBHOOK_SECRET` | `google-secret-demo` |
 | `META_WEBHOOK_VERIFY_TOKEN` | `meta-verify-token-demo` |
 | `META_WEBHOOK_SECRET` | `meta-secret-demo` |
