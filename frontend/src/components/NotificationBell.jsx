@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationContext';
+import { useToast } from '../context/ToastContext';
 import { formatDate } from '../utils/constants';
 
 const TYPE_LABELS = {
@@ -13,6 +14,7 @@ const TYPE_LABELS = {
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const toast = useToast();
   const {
     notifications,
     unreadCount,
@@ -28,7 +30,14 @@ export default function NotificationBell() {
     handleNotificationClick(n);
   };
 
-  const onRefresh = () => refresh({ showLoading: true });
+  const onRefresh = async () => {
+    const result = await refresh({ showLoading: true, fullRefresh: true });
+    if (result?.ok) {
+      toast.success(result.count ? `${result.count} notification(s)` : 'Notifications updated');
+    } else {
+      toast.error('Could not refresh notifications');
+    }
+  };
 
   return (
     <div className="relative">

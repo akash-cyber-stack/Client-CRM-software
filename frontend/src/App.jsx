@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
 import LeadDetail from './pages/LeadDetail';
 import Employees from './pages/Employees';
+import EmployeePerformance from './pages/EmployeePerformance';
 import CallHistory from './pages/CallHistory';
 import FollowUps from './pages/FollowUps';
 import Reports from './pages/Reports';
@@ -33,6 +34,7 @@ function AppRoutes() {
         <Route path="leads" element={<Leads />} />
         <Route path="leads/:id" element={<LeadDetail />} />
         <Route path="employees" element={<ProtectedRoute adminOnly><Employees /></ProtectedRoute>} />
+        <Route path="employees/:id/performance" element={<EmployeePerformance />} />
         <Route path="calls" element={<CallHistory />} />
         <Route path="follow-ups" element={<FollowUps />} />
         <Route path="reports" element={<Reports />} />

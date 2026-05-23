@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { employeesApi } from '../api';
 import { useToast } from '../context/ToastContext';
 import Modal from '../components/Modal';
@@ -126,6 +127,9 @@ export default function Employees() {
                     </span>
                   </td>
                   <td className="py-3 space-x-2">
+                    <Link to={`/employees/${e.id}/performance`} className="text-primary-600 text-sm hover:underline">
+                      Performance
+                    </Link>
                     <button className="text-primary-600 text-sm" onClick={() => openEdit(e)}>Edit</button>
                     {e.role !== 'SUPER_ADMIN' && (
                       <button className="text-red-600 text-sm" onClick={() => handleDelete(e.id)}>Delete</button>

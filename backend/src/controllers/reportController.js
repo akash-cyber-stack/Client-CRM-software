@@ -218,6 +218,154 @@ export const exportCsv = (rows, headers) => {
   return lines.join('\n');
 };
 
+function parseDayRange(dateStr) {
+  const day = dateStr ? new Date(`${dateStr}T00:00:00`) : new Date();
+  day.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(day);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  return { day, dayEnd };
+}
+
+function parseMonthRange(monthStr) {
+  const [y, m] = (monthStr || '').split('-').map(Number);
+  const start = monthStr && y && m
+    ? new Date(y, m - 1, 1)
+    : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  return { start, end, label: `${start.toLocaleString('en', { month: 'long' })} ${start.getFullYear()}` };
+}
+
+function summarizeLeads(leads) {
+  const completed = leads.filter((l) => l.status === 'CONVERTED').length;
+  const lost = leads.filter((l) => ['NOT_INTERESTED', 'LOST'].includes(l.status)).length;
+  const incomplete = leads.filter(
+    (l) => !['CONVERTED', 'NOT_INTERESTED', 'LOST'].includes(l.status)
+  ).length;
+  return { total: leads.length, completed, incomplete, lost };
+}
+
+function summarizeCalls(calls) {
+  return {
+    total: calls.length,
+    received: calls.filter((c) => c.callStatus === 'ANSWERED').length,
+    missed: calls.filter((c) => c.callStatus === 'MISSED' || c.callType === 'MISSED').length,
+    rejected: calls.filter((c) => ['FAILED', 'BUSY'].includes(c.callStatus)).length,
+    outgoing: calls.filter((c) => c.callType === 'OUTGOING').length,
+    incoming: calls.filter((c) => c.callType === 'INCOMING').length,
+  };
+}
+
+/** Detailed daily + monthly performance for one employee */
+export const employeePerformanceDetail = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (req.employeeScopeId && req.employeeScopeId !== id) {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+
+  const employee = await prisma.user.findFirst({
+    where: { id, role: { in: ['SALES_EMPLOYEE', 'MANAGER', 'SUPER_ADMIN'] } },
+    select: { id: true, name: true, email: true, role: true, department: true, phone: true },
+  });
+  if (!employee) {
+    return res.status(404).json({ success: false, message: 'Employee not found' });
+  }
+
+  const { day, dayEnd } = parseDayRange(req.query.date);
+  const { start: monthStart, end: monthEnd, label: monthLabel } = parseMonthRange(req.query.month);
+
+  const leadDayWhere = {
+    assignedToId: id,
+    OR: [
+      { createdAt: { gte: day, lt: dayEnd } },
+      { updatedAt: { gte: day, lt: dayEnd } },
+    ],
+  };
+
+  const leadMonthWhere = {
+    assignedToId: id,
+    OR: [
+      { createdAt: { gte: monthStart, lt: monthEnd } },
+      { updatedAt: { gte: monthStart, lt: monthEnd } },
+    ],
+  };
+
+  const [dailyLeads, dailyCalls, monthlyLeads, monthlyCalls, followUpsMonth] = await Promise.all([
+    prisma.lead.findMany({
+      where: leadDayWhere,
+      select: { id: true, customerName: true, phone: true, status: true, createdAt: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
+    prisma.callLog.findMany({
+      where: { employeeId: id, callStartTime: { gte: day, lt: dayEnd } },
+      select: {
+        id: true,
+        callType: true,
+        callStatus: true,
+        durationSeconds: true,
+        callStartTime: true,
+        customerPhone: true,
+        lead: { select: { id: true, customerName: true } },
+      },
+      orderBy: { callStartTime: 'desc' },
+    }),
+    prisma.lead.findMany({
+      where: leadMonthWhere,
+      select: { id: true, status: true, createdAt: true },
+    }),
+    prisma.callLog.findMany({
+      where: { employeeId: id, callStartTime: { gte: monthStart, lt: monthEnd } },
+      select: { callStatus: true, callType: true },
+    }),
+    prisma.followUp.findMany({
+      where: {
+        employeeId: id,
+        scheduledAt: { gte: monthStart, lt: monthEnd },
+      },
+      select: { isCompleted: true },
+    }),
+  ]);
+
+  const dailyLeadStats = summarizeLeads(dailyLeads);
+  const dailyCallStats = summarizeCalls(dailyCalls);
+  const monthlyLeadStats = summarizeLeads(monthlyLeads);
+  const monthlyCallStats = summarizeCalls(monthlyCalls);
+
+  const followUpsDone = followUpsMonth.filter((f) => f.isCompleted).length;
+  const followUpsPending = followUpsMonth.length - followUpsDone;
+
+  const leadsByStatus = await prisma.lead.groupBy({
+    by: ['status'],
+    where: { assignedToId: id, createdAt: { gte: monthStart, lt: monthEnd } },
+    _count: true,
+  });
+
+  res.json({
+    success: true,
+    data: {
+      employee,
+      selectedDate: day.toISOString().slice(0, 10),
+      daily: {
+        leads: dailyLeadStats,
+        calls: dailyCallStats,
+        leadList: dailyLeads,
+        callList: dailyCalls,
+      },
+      monthly: {
+        monthLabel,
+        monthKey: `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`,
+        leads: monthlyLeadStats,
+        calls: monthlyCallStats,
+        followUps: { total: followUpsMonth.length, completed: followUpsDone, pending: followUpsPending },
+        conversionRate:
+          monthlyLeadStats.total > 0
+            ? Math.round((monthlyLeadStats.completed / monthlyLeadStats.total) * 10000) / 100
+            : 0,
+        leadsByStatus: leadsByStatus.map((r) => ({ status: r.status, count: r._count })),
+      },
+    },
+  });
+});
+
 export const exportEmployeeReport = asyncHandler(async (req, res) => {
   const employees = await prisma.user.findMany({
     where: { role: 'SALES_EMPLOYEE' },

@@ -9,7 +9,7 @@ export default function EmployeePerformanceChart({ data, chartTick, tooltipStyle
   const onBarClick = (barData) => {
     const row = barData?.payload;
     if (!row?.id) return;
-    navigate(`/reports?tab=employees&employeeId=${row.id}`);
+    navigate(`/employees/${row.id}/performance`);
   };
 
   return (

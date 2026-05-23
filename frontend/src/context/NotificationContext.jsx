@@ -89,21 +89,28 @@ export function NotificationProvider({ children }) {
 
   const refresh = useCallback(
     async (options = {}) => {
-      if (!user) return;
-      const { showLoading = false } = options;
+      if (!user) return { ok: false };
+      const { showLoading = false, fullRefresh = false } = options;
       if (showLoading) setRefreshing(true);
       try {
-        const res = await notificationsApi.poll({ since: lastPollRef.current });
-        const { notifications: polled, unreadCount: count } = res.data.data;
+        const pollSince = fullRefresh
+          ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+          : lastPollRef.current;
+
+        try {
+          const res = await notificationsApi.poll({ since: pollSince });
+          const { notifications: polled } = res.data.data || {};
+          if (polled?.length) alertNew(polled);
+        } catch {
+          /* poll optional on manual refresh */
+        }
+
         lastPollRef.current = new Date().toISOString();
-
-        if (polled?.length) alertNew(polled);
-
         const unread = await loadUnread();
-        if (typeof count === 'number') setUnreadCount(count);
-        else setUnreadCount(unread.length);
-      } catch {
-        /* silent */
+        setUnreadCount(unread.length);
+        return { ok: true, count: unread.length };
+      } catch (err) {
+        return { ok: false, error: err };
       } finally {
         if (showLoading) setRefreshing(false);
       }
