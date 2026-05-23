@@ -9,7 +9,8 @@ Sales Lead CRM helps sales teams manage leads, assign leads to employees, track 
 ## Live Demo
 
 **Application URL:**  
-https://ar-crm-iota.vercel.app/login
+https://ar-crm-iota-pi.vercel.app/login (latest — same as localhost).  
+Old URL `ar-crm-iota.vercel.app` may lag until that Vercel project is redeployed from GitHub `main`.
 
 ---
 
