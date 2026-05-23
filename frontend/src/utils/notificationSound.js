@@ -7,11 +7,30 @@ function getCtx() {
   return audioCtx;
 }
 
+async function unlockAudioContext() {
+  const ctx = getCtx();
+  if (ctx.state === 'suspended') {
+    try {
+      await ctx.resume();
+    } catch {
+      // ignore if browser blocks autoplay
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    void unlockAudioContext();
+  };
+  window.addEventListener('pointerdown', unlock, { once: true });
+  window.addEventListener('touchstart', unlock, { once: true });
+}
+
 /** Pleasant CRM alert tone — works on desktop & mobile browsers */
 export function playNotificationSound() {
   try {
+    void unlockAudioContext();
     const ctx = getCtx();
-    if (ctx.state === 'suspended') ctx.resume();
 
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();

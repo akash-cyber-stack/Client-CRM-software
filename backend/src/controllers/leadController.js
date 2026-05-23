@@ -108,6 +108,38 @@ export const createLead = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: updated });
 });
 
+export const bulkImportLeads = asyncHandler(async (req, res) => {
+  const { leads, assignmentMode, assignToEmployeeId, assignedToId } = req.body;
+
+  if (!Array.isArray(leads) || leads.length === 0) {
+    return res.status(400).json({ success: false, message: 'leads array required' });
+  }
+
+  if (leads.length > 5000) {
+    return res.status(400).json({ success: false, message: 'Maximum 5000 rows per import' });
+  }
+
+  const mode =
+    assignmentMode ||
+    (assignToEmployeeId || assignedToId ? 'ASSIGN_TO' : null);
+
+  if (!mode || !['ROUND_ROBIN', 'ASSIGN_TO'].includes(mode)) {
+    return res.status(400).json({
+      success: false,
+      message: 'assignmentMode must be ROUND_ROBIN or ASSIGN_TO',
+    });
+  }
+
+  const { importLeadsBulk } = await import('../services/leadImportService.js');
+  const result = await importLeadsBulk({
+    rows: leads,
+    assignmentMode: mode,
+    assignToEmployeeId: assignToEmployeeId || assignedToId,
+  });
+
+  res.status(201).json({ success: true, data: result });
+});
+
 export const updateLead = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const existing = await prisma.lead.findUnique({ where: { id } });

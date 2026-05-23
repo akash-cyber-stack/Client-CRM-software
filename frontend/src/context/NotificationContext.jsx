@@ -133,7 +133,7 @@ export function NotificationProvider({ children }) {
     init();
 
     const prefs = getNotificationPrefs();
-    const ms = Math.max(15, prefs.pollIntervalSec || 30) * 1000;
+    const ms = Math.max(10, prefs.pollIntervalSec || 10) * 1000;
     const id = setInterval(() => refresh(), ms);
     return () => clearInterval(id);
   }, [user, refresh, loadUnread]);

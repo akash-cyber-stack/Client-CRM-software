@@ -58,7 +58,10 @@ Login: https://ar-crm-iota.vercel.app/login
   - Store IVR extension/mobile number
 
 - Lead management
-  - Manual lead creation
+  - **Add Lead Manually** (Super Admin / Manager)
+  - **Import Leads** from Excel (.xlsx) or CSV — preview, validation, bulk assign or round-robin
+  - Download sample import template from Leads page
+  - Sales Employee cannot create or import leads (403 on API)
   - Google Ads lead capture
   - Meta/Facebook/Instagram lead capture
   - Lead search and filters

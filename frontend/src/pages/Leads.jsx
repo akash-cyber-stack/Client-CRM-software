@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
+import ImportLeadsModal from '../components/ImportLeadsModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getApiErrorMessage } from '../utils/apiError';
 import { LEAD_STATUSES, LEAD_SOURCES, SOURCE_LABELS, formatDate } from '../utils/constants';
@@ -30,7 +31,8 @@ export default function Leads() {
     source: searchParams.get('source') || '',
     assignedToId: '',
   });
-  const [modalOpen, setModalOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
 
   const load = async () => {
@@ -85,7 +87,7 @@ export default function Leads() {
       };
       await leadsApi.create(payload);
       toast.success('Lead created successfully');
-      setModalOpen(false);
+      setManualOpen(false);
       setForm(emptyForm);
       await load();
     } catch (err) {
@@ -97,14 +99,29 @@ export default function Leads() {
     }
   };
 
+  const salesEmployees = employees.filter((e) => e.role === 'SALES_EMPLOYEE' && e.status === 'ACTIVE');
+
   return (
     <div className="page-enter">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h1 className="text-2xl font-bold text-main tracking-tight">Leads</h1>
         {isAdmin && (
-          <button className="btn-primary w-full sm:w-auto" onClick={() => { setFormError(''); setModalOpen(true); }}>
-            + Add Lead
-          </button>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              className="btn-primary flex-1 sm:flex-none"
+              onClick={() => { setFormError(''); setForm(emptyForm); setManualOpen(true); }}
+            >
+              Add Lead Manually
+            </button>
+            <button
+              type="button"
+              className="btn-secondary flex-1 sm:flex-none"
+              onClick={() => setImportOpen(true)}
+            >
+              Import Leads
+            </button>
+          </div>
         )}
       </div>
 
@@ -170,7 +187,7 @@ export default function Leads() {
         </div>
       )}
 
-      <Modal open={modalOpen} onClose={() => !saving && setModalOpen(false)} title="Add Manual Lead">
+      <Modal open={manualOpen} onClose={() => !saving && setManualOpen(false)} title="Add Lead Manually" size="lg">
         {formError && <div className="alert-error mb-4">{formError}</div>}
         <form onSubmit={handleCreate} className="space-y-3">
           <input className="input" placeholder="Customer Name *" required value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} />
@@ -178,20 +195,27 @@ export default function Leads() {
           <input className="input" type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           <input className="input" placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
           <textarea className="input" placeholder="Requirement" rows={3} value={form.requirement} onChange={(e) => setForm({ ...form, requirement: e.target.value })} />
-          {isAdmin && (
-            <select className="input" value={form.assignedToId} onChange={(e) => setForm({ ...form, assignedToId: e.target.value })}>
-              <option value="">Auto-assign (Round Robin)</option>
-              {employees.filter((e) => e.role === 'SALES_EMPLOYEE').map((e) => (
-                <option key={e.id} value={e.id}>{e.name}</option>
-              ))}
-            </select>
-          )}
+          <select className="input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}>
+            {LEAD_SOURCES.map((s) => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
+          </select>
+          <select className="input" value={form.assignedToId} onChange={(e) => setForm({ ...form, assignedToId: e.target.value })}>
+            <option value="">Auto-assign (Round Robin)</option>
+            {salesEmployees.map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
           <button type="submit" className="btn-primary w-full" disabled={saving}>
             {saving ? 'Creating...' : 'Create Lead'}
           </button>
         </form>
       </Modal>
+
+      <ImportLeadsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        employees={employees}
+        onSuccess={load}
+      />
     </div>
   );
 }
-

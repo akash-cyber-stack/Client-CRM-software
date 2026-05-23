@@ -4,7 +4,7 @@ const DEFAULTS = {
   soundEnabled: true,
   desktopEnabled: true,
   toastEnabled: true,
-  pollIntervalSec: 30,
+  pollIntervalSec: 10,
 };
 
 export function getNotificationPrefs() {
