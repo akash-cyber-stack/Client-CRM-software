@@ -9,8 +9,23 @@ Sales Lead CRM helps sales teams manage leads, assign leads to employees, track 
 ## Live Demo
 
 **Application URL:**  
-https://ar-crm-iota-pi.vercel.app/login (latest — same as localhost).  
-Old URL `ar-crm-iota.vercel.app` may lag until that Vercel project is redeployed from GitHub `main`.
+## Local URLs (important)
+
+| What | URL |
+|------|-----|
+| **Frontend (CRM UI)** | http://localhost:5173 |
+| **Backend API only** | http://localhost:5000 — `/api/health`, not the dashboard |
+
+Run both: `npm run dev` from project root.
+
+## Live (Vercel)
+
+| URL | Notes |
+|-----|--------|
+| https://ar-crm-iota.vercel.app | Project **ar-crm** (argroupads) — use after redeploy from GitHub `main` |
+| https://ar-crm-iota-pi.vercel.app | Alternate deploy; same code if env vars are set |
+
+Login: https://ar-crm-iota.vercel.app/login
 
 ---
 

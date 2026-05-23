@@ -20,6 +20,25 @@ app.use(
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+/** Backend only — open the frontend URL in the browser for the CRM UI */
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    service: 'sales-lead-crm-api',
+    message: 'This is the API server. Open the frontend URL for the dashboard.',
+    frontend: env.frontendUrl,
+    endpoints: { health: '/api/health', login: '/api/auth/login' },
+  });
+});
+
+app.get('/api', (_req, res) => {
+  res.json({
+    success: true,
+    message: 'API is running. Prefix routes with /api — e.g. /api/health',
+    health: '/api/health',
+  });
+});
+
 app.get('/api/health', async (_req, res) => {
   if (!process.env.DATABASE_URL) {
     return res.status(503).json({
