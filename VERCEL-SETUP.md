@@ -2,7 +2,10 @@
 
 ## Login error: `Environment variable not found: DATABASE_URL`
 
-Project **ar-crm-iota** (`ar-crm-iota-pi.vercel.app`) has **no env vars** yet. Fix:
+**Use project `ar-crm` on team `argroupads-eductions`** → https://ar-crm-iota.vercel.app  
+Full steps: **[VERCEL-ARGROUPADS.md](./VERCEL-ARGROUPADS.md)**
+
+Personal project **ar-crm-iota** (`ar-crm-iota-pi.vercel.app`) also needs env vars if you use that URL. Fix:
 
 1. [Neon Console](https://console.neon.tech) → your project → **Connect** → copy **Pooled** connection string.
 2. Vercel → [ar-crm-iota Settings → Environment Variables](https://vercel.com/akashpandeyweconnect-6582s-projects/ar-crm-iota/settings/environment-variables)
