@@ -56,3 +56,6 @@ export const scopeToEmployee = (req, res, next) => {
   }
   next();
 };
+
+/** Block sales employees (calls, employees list, org-wide reports) */
+export const managerOrSuperAdmin = authorize('SUPER_ADMIN', 'MANAGER');

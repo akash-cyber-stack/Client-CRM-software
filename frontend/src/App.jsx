@@ -35,9 +35,9 @@ function AppRoutes() {
         <Route path="leads/:id" element={<LeadDetail />} />
         <Route path="employees" element={<ProtectedRoute adminOnly><Employees /></ProtectedRoute>} />
         <Route path="employees/:id/performance" element={<EmployeePerformance />} />
-        <Route path="calls" element={<CallHistory />} />
+        <Route path="calls" element={<ProtectedRoute adminOnly><CallHistory /></ProtectedRoute>} />
         <Route path="follow-ups" element={<FollowUps />} />
-        <Route path="reports" element={<Reports />} />
+        <Route path="reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />

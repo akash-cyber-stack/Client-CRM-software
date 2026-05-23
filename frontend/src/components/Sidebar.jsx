@@ -6,9 +6,9 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/leads', label: 'Leads', icon: '👥' },
   { to: '/employees', label: 'Employees', icon: '👔', adminOnly: true },
-  { to: '/calls', label: 'Call History', icon: '📞' },
+  { to: '/calls', label: 'Call History', icon: '📞', adminOnly: true },
   { to: '/follow-ups', label: 'Follow-ups', icon: '📅' },
-  { to: '/reports', label: 'Reports', icon: '📈' },
+  { to: '/reports', label: 'Reports', icon: '📈', adminOnly: true },
   { to: '/settings', label: 'Settings', icon: '⚙️', adminOnly: true },
 ];
 

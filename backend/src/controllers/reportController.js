@@ -17,7 +17,6 @@ function dateFilter(query) {
 export const dashboard = asyncHandler(async (req, res) => {
   const scopeId = req.employeeScopeId;
   const leadWhere = scopeId ? { assignedToId: scopeId } : {};
-  const callWhere = scopeId ? { employeeId: scopeId } : {};
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -49,9 +48,15 @@ export const dashboard = asyncHandler(async (req, res) => {
         isCompleted: false,
       },
     }),
-    prisma.callLog.count({ where: callWhere }),
-    prisma.callLog.count({ where: { ...callWhere, callStatus: 'ANSWERED' } }),
-    prisma.callLog.count({ where: { ...callWhere, callStatus: 'MISSED' } }),
+    scopeId
+      ? Promise.resolve(0)
+      : prisma.callLog.count(),
+    scopeId
+      ? Promise.resolve(0)
+      : prisma.callLog.count({ where: { callStatus: 'ANSWERED' } }),
+    scopeId
+      ? Promise.resolve(0)
+      : prisma.callLog.count({ where: { callStatus: 'MISSED' } }),
     prisma.lead.groupBy({ by: ['source'], where: leadWhere, _count: true }),
     prisma.lead.groupBy({
       by: ['campaignName'],

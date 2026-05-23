@@ -16,7 +16,7 @@ const router = Router();
 router.use(authenticate, scopeToEmployee);
 
 router.get('/', listLeads);
-router.post('/', createLead);
+router.post('/', authorize('SUPER_ADMIN', 'MANAGER'), createLead);
 router.get('/:id', getLead);
 router.put('/:id', updateLead);
 router.delete('/:id', authorize('SUPER_ADMIN', 'MANAGER'), deleteLead);

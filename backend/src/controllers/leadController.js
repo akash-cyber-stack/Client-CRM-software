@@ -46,8 +46,17 @@ export const getLead = asyncHandler(async (req, res) => {
   }
 
   const timeline = await getLeadTimeline(id);
-  res.json({ success: true, data: { ...lead, timeline } });
+  const payload = { ...lead, timeline };
+  if (req.employeeScopeId) {
+    delete payload.callLogs;
+  }
+  res.json({ success: true, data: payload });
 });
+
+const SALES_EDITABLE_LEAD_FIELDS = [
+  'customerName', 'phone', 'email', 'city', 'requirement', 'remarks',
+  'status', 'followUpDate',
+];
 
 export const createLead = asyncHandler(async (req, res) => {
   const body = req.body;
@@ -107,10 +116,23 @@ export const updateLead = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
 
-  const { status, followUpDate, ...rest } = req.body;
-  const data = { ...rest };
-  if (followUpDate !== undefined) data.followUpDate = followUpDate ? new Date(followUpDate) : null;
-  if (status) data.status = status;
+  const { status, followUpDate } = req.body;
+  const data = {};
+  if (req.employeeScopeId) {
+    for (const key of SALES_EDITABLE_LEAD_FIELDS) {
+      if (req.body[key] === undefined) continue;
+      if (key === 'followUpDate') {
+        data.followUpDate = req.body.followUpDate ? new Date(req.body.followUpDate) : null;
+      } else {
+        data[key] = req.body[key];
+      }
+    }
+  } else {
+    const { status: bodyStatus, followUpDate: bodyFollowUp, ...rest } = req.body;
+    Object.assign(data, rest);
+    if (bodyFollowUp !== undefined) data.followUpDate = bodyFollowUp ? new Date(bodyFollowUp) : null;
+    if (bodyStatus) data.status = bodyStatus;
+  }
 
   const lead = await prisma.lead.update({
     where: { id },
@@ -164,8 +186,11 @@ export const addFollowUp = asyncHandler(async (req, res) => {
 
   const lead = await prisma.lead.findUnique({ where: { id } });
   if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+  if (req.employeeScopeId && lead.assignedToId !== req.employeeScopeId) {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
 
-  const empId = employeeId || lead.assignedToId || req.user.id;
+  const empId = req.employeeScopeId || employeeId || lead.assignedToId || req.user.id;
   const followUp = await prisma.followUp.create({
     data: {
       leadId: id,

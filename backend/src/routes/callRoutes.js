@@ -6,11 +6,11 @@ import {
   getCallsByLead,
   initiateCall,
 } from '../controllers/callController.js';
-import { authenticate, scopeToEmployee } from '../middleware/auth.js';
+import { authenticate, managerOrSuperAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
-router.use(authenticate, scopeToEmployee);
+router.use(authenticate, managerOrSuperAdmin);
 
 router.post('/initiate', initiateCall);
 router.get('/', listCalls);

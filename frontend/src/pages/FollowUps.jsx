@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { followUpsApi } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getApiErrorMessage } from '../utils/apiError';
@@ -13,6 +14,7 @@ const TABS = [
 ];
 
 export default function FollowUps() {
+  const { isAdmin } = useAuth();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const type = searchParams.get('type') || 'today';
@@ -92,7 +94,7 @@ export default function FollowUps() {
                 </Link>
                 <p className="text-sm text-muted">{f.lead.phone} &middot; {formatDate(f.scheduledAt)}</p>
                 {f.remarks && <p className="text-sm mt-1">{f.remarks}</p>}
-                <p className="text-xs text-subtle">Employee: {f.employee?.name}</p>
+                {isAdmin && <p className="text-xs text-subtle">Employee: {f.employee?.name}</p>}
               </div>
               <button className="btn-primary text-sm" onClick={() => complete(f.id)}>Mark Complete</button>
             </div>

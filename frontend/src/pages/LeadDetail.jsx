@@ -104,18 +104,20 @@ export default function LeadDetail() {
           <p className="text-muted">Lead #{lead.leadNumber} &middot; {SOURCE_LABELS[lead.source]}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleCall}
-            disabled={calling}
-            className="btn-primary flex items-center gap-2"
-          >
-            {calling ? 'Calling...' : '📞 Call via IVR'}
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleCall}
+              disabled={calling}
+              className="btn-primary flex items-center gap-2"
+            >
+              {calling ? 'Calling...' : '📞 Call via IVR'}
+            </button>
+          )}
           <StatusBadge status={lead.status} />
         </div>
       </div>
-      {callMsg && <p className="text-sm text-main mb-4 alert-info">{callMsg}</p>}
+      {isAdmin && callMsg && <p className="text-sm text-main mb-4 alert-info">{callMsg}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -129,25 +131,27 @@ export default function LeadDetail() {
             <div className="col-span-2"><span className="text-muted">Requirement</span><p className="font-medium mt-1">{lead.requirement || '-'}</p></div>
           </div>
 
-          <div className="card">
-            <h2 className="font-semibold mb-4 text-main">Call History & Recordings</h2>
-            {lead.callLogs?.length === 0 ? (
-              <p className="text-muted text-sm">No calls yet</p>
-            ) : (
-              <div className="space-y-4">
-                {lead.callLogs.map((c) => (
-                  <div key={c.id} className="border rounded-lg p-4 flex flex-wrap justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{c.callType} &middot; {c.callStatus}</p>
-                      <p className="text-sm text-muted">{formatDate(c.callStartTime)} &middot; {formatDuration(c.durationSeconds)}</p>
-                      <p className="text-sm">Agent: {c.employee?.name || 'Unknown'}</p>
+          {isAdmin && (
+            <div className="card">
+              <h2 className="font-semibold mb-4 text-main">Call History & Recordings</h2>
+              {lead.callLogs?.length === 0 ? (
+                <p className="text-muted text-sm">No calls yet</p>
+              ) : (
+                <div className="space-y-4">
+                  {lead.callLogs.map((c) => (
+                    <div key={c.id} className="border rounded-lg p-4 flex flex-wrap justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{c.callType} &middot; {c.callStatus}</p>
+                        <p className="text-sm text-muted">{formatDate(c.callStartTime)} &middot; {formatDuration(c.durationSeconds)}</p>
+                        <p className="text-sm">Agent: {c.employee?.name || 'Unknown'}</p>
+                      </div>
+                      <AudioPlayer url={c.recordingUrl} />
                     </div>
-                    <AudioPlayer url={c.recordingUrl} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="card">
             <h2 className="font-semibold mb-4 text-main">Timeline</h2>

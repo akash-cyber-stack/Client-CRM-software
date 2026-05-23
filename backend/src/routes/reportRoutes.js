@@ -8,18 +8,18 @@ import {
   exportEmployeeReport,
   employeePerformanceDetail,
 } from '../controllers/reportController.js';
-import { authenticate, scopeToEmployee } from '../middleware/auth.js';
+import { authenticate, scopeToEmployee, managerOrSuperAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
 router.use(authenticate, scopeToEmployee);
 
 router.get('/dashboard', dashboard);
-router.get('/employees', employeeReport);
-router.get('/employees/export', exportEmployeeReport);
+router.get('/employees', managerOrSuperAdmin, employeeReport);
+router.get('/employees/export', managerOrSuperAdmin, exportEmployeeReport);
 router.get('/employees/:id/performance', employeePerformanceDetail);
-router.get('/calls', callReport);
-router.get('/campaigns', campaignReport);
-router.get('/conversions', conversionReport);
+router.get('/calls', managerOrSuperAdmin, callReport);
+router.get('/campaigns', managerOrSuperAdmin, campaignReport);
+router.get('/conversions', managerOrSuperAdmin, conversionReport);
 
 export default router;

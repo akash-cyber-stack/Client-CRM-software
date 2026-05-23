@@ -46,6 +46,13 @@ export const listFollowUps = asyncHandler(async (req, res) => {
 
 export const completeFollowUp = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const existing = await prisma.followUp.findUnique({ where: { id } });
+  if (!existing) {
+    return res.status(404).json({ success: false, message: 'Follow-up not found' });
+  }
+  if (req.employeeScopeId && existing.employeeId !== req.employeeScopeId) {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
   const followUp = await prisma.followUp.update({
     where: { id },
     data: { isCompleted: true, completedAt: new Date() },

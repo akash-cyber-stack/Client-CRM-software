@@ -101,9 +101,11 @@ export default function Leads() {
     <div className="page-enter">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h1 className="text-2xl font-bold text-main tracking-tight">Leads</h1>
-        <button className="btn-primary w-full sm:w-auto" onClick={() => { setFormError(''); setModalOpen(true); }}>
-          + Add Lead
-        </button>
+        {isAdmin && (
+          <button className="btn-primary w-full sm:w-auto" onClick={() => { setFormError(''); setModalOpen(true); }}>
+            + Add Lead
+          </button>
+        )}
       </div>
 
       {listError && <div className="alert-error mb-4">{listError}</div>}

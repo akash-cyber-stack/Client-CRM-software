@@ -95,11 +95,14 @@ export async function upsertLeadFromWebhook({
 export function buildLeadWhere(filters, employeeScopeId) {
   const where = {};
 
-  if (employeeScopeId) where.assignedToId = employeeScopeId;
+  if (employeeScopeId) {
+    where.assignedToId = employeeScopeId;
+  } else if (filters.assignedToId) {
+    where.assignedToId = filters.assignedToId;
+  }
 
   if (filters.status) where.status = filters.status;
   if (filters.source) where.source = filters.source;
-  if (filters.assignedToId) where.assignedToId = filters.assignedToId;
 
   if (filters.search) {
     where.OR = [

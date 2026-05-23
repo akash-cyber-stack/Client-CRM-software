@@ -39,27 +39,32 @@ export default function Dashboard() {
     source: s.source,
   }));
 
-  const statCards = [
-    { title: 'Total Leads', value: data.totalLeads, color: 'primary', to: '/leads' },
-    { title: 'New Leads', value: data.newLeads, color: 'slate', to: '/leads?status=NEW' },
-    { title: 'Converted', value: data.convertedLeads, color: 'green', to: '/leads?status=CONVERTED' },
-    { title: 'Conversion %', value: `${data.conversionRate}%`, color: 'green', to: '/reports?tab=conversions', hint: 'Open report →' },
-    { title: 'Today Follow-ups', value: data.todayFollowUps, color: 'amber', to: '/follow-ups?type=today' },
-    { title: 'Total Calls', value: data.totalCalls, color: 'primary', to: '/calls' },
-    { title: 'Answered Calls', value: data.answeredCalls, color: 'green', to: '/calls?callStatus=ANSWERED' },
-    { title: 'Missed Calls', value: data.missedCalls, color: 'red', to: '/calls?callStatus=MISSED' },
-  ];
-
-  if (!isAdmin) {
-    statCards.push(
-      { title: 'My Pending Leads', value: data.myPendingLeads, color: 'amber', to: '/leads?status=ASSIGNED', hint: 'My pending leads →' },
-      { title: 'My Assigned Leads', value: data.myAssignedLeads, color: 'primary', to: '/leads' }
-    );
-  }
+  const statCards = isAdmin
+    ? [
+        { title: 'Total Leads', value: data.totalLeads, color: 'primary', to: '/leads' },
+        { title: 'New Leads', value: data.newLeads, color: 'slate', to: '/leads?status=NEW' },
+        { title: 'Converted', value: data.convertedLeads, color: 'green', to: '/leads?status=CONVERTED' },
+        { title: 'Conversion %', value: `${data.conversionRate}%`, color: 'green', to: '/reports?tab=conversions', hint: 'Open report →' },
+        { title: 'Today Follow-ups', value: data.todayFollowUps, color: 'amber', to: '/follow-ups?type=today' },
+        { title: 'Total Calls', value: data.totalCalls, color: 'primary', to: '/calls' },
+        { title: 'Answered Calls', value: data.answeredCalls, color: 'green', to: '/calls?callStatus=ANSWERED' },
+        { title: 'Missed Calls', value: data.missedCalls, color: 'red', to: '/calls?callStatus=MISSED' },
+      ]
+    : [
+        { title: 'My Assigned Leads', value: data.myAssignedLeads ?? data.totalLeads, color: 'primary', to: '/leads' },
+        { title: 'New Leads', value: data.newLeads, color: 'slate', to: '/leads?status=NEW' },
+        { title: 'Converted', value: data.convertedLeads, color: 'green', to: '/leads?status=CONVERTED' },
+        { title: 'Conversion %', value: `${data.conversionRate}%`, color: 'green', to: '/leads?status=CONVERTED' },
+        { title: 'Today Follow-ups', value: data.todayFollowUps, color: 'amber', to: '/follow-ups?type=today' },
+        { title: 'My Pending Leads', value: data.myPendingLeads, color: 'amber', to: '/leads?status=ASSIGNED', hint: 'My pending leads →' },
+      ];
 
   return (
     <div className="page-enter relative z-0">
-      <PageHeader title="Dashboard" subtitle="Overview of leads, calls & performance" />
+      <PageHeader
+        title="Dashboard"
+        subtitle={isAdmin ? 'Overview of leads, calls & performance' : 'Your assigned leads & follow-ups'}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-6 sm:mb-8">
         {statCards.map((card) => (
@@ -110,7 +115,7 @@ export default function Dashboard() {
           />
         )}
 
-        {data.campaignBreakdown?.length > 0 && (
+        {isAdmin && data.campaignBreakdown?.length > 0 && (
           <Link
             to="/reports?tab=campaigns"
             className="card lg:col-span-2 block hover:border-primary-500/40 transition-all active:scale-[0.99] no-underline"
