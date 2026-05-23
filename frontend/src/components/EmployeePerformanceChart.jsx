@@ -16,7 +16,11 @@ export default function EmployeePerformanceChart({ data, chartTick, tooltipStyle
     <div className="card">
       <h2 className="font-semibold mb-2 text-main">Employee Performance</h2>
       <p className="text-xs text-muted mb-4">Tap a blue bar (Leads) to open that employee&apos;s performance</p>
-      <div className="w-full h-[200px] sm:h-[220px]">
+      <div className="w-full overflow-x-auto">
+        <div
+          className="h-[200px] sm:h-[220px]"
+          style={{ minWidth: Math.max(280, data.length * 72) }}
+        >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ bottom: 20 }}>
             <XAxis dataKey="name" tick={{ fontSize: 10, fill: chartTick }} interval={0} angle={-20} textAnchor="end" height={50} />
@@ -41,6 +45,7 @@ export default function EmployeePerformanceChart({ data, chartTick, tooltipStyle
             <Bar dataKey="calls" fill="#8b5cf6" name="Calls" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </div>
       <p className="text-xs text-primary-500 mt-3">
         Or view all in{' '}

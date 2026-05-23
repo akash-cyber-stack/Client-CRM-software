@@ -7,6 +7,9 @@ export const LEAD_SOURCES = ['GOOGLE_ADS', 'META_ADS', 'MANUAL'];
 
 export const ROLES = ['SUPER_ADMIN', 'MANAGER', 'SALES_EMPLOYEE'];
 
+/** Users who can open performance panel / appear on dashboard chart */
+export const PERFORMANCE_ROLES = ['SALES_EMPLOYEE', 'MANAGER'];
+
 export const STATUS_COLORS = {
   NEW: 'bg-blue-500/20 text-blue-400 dark:text-blue-300',
   ASSIGNED: 'bg-indigo-500/20 text-indigo-400 dark:text-indigo-300',

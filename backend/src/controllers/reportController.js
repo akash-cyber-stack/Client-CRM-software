@@ -1,6 +1,9 @@
 import prisma from '../config/db.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
+/** Roles that appear in performance charts / detail (not Super Admin) */
+const PERFORMANCE_ROLES = ['SALES_EMPLOYEE', 'MANAGER'];
+
 function dateFilter(query) {
   const filter = {};
   if (query.fromDate || query.toDate) {
@@ -58,12 +61,13 @@ export const dashboard = asyncHandler(async (req, res) => {
     scopeId
       ? null
       : prisma.user.findMany({
-          where: { role: 'SALES_EMPLOYEE' },
+          where: { role: { in: PERFORMANCE_ROLES } },
           select: {
             id: true,
             name: true,
             _count: { select: { assignedLeads: true, callLogs: true } },
           },
+          orderBy: { name: 'asc' },
         }),
     scopeId
       ? prisma.lead.count({
@@ -263,7 +267,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
   }
 
   const employee = await prisma.user.findFirst({
-    where: { id, role: { in: ['SALES_EMPLOYEE', 'MANAGER', 'SUPER_ADMIN'] } },
+    where: { id, role: { in: PERFORMANCE_ROLES } },
     select: { id: true, name: true, email: true, role: true, department: true, phone: true },
   });
   if (!employee) {
@@ -368,7 +372,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
 
 export const exportEmployeeReport = asyncHandler(async (req, res) => {
   const employees = await prisma.user.findMany({
-    where: { role: 'SALES_EMPLOYEE' },
+    where: { role: { in: PERFORMANCE_ROLES } },
     include: { _count: { select: { assignedLeads: true, callLogs: true } } },
   });
   const rows = employees.map((e) => ({
