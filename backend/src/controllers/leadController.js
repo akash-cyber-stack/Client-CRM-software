@@ -5,10 +5,19 @@ import { manualAssignLead } from '../services/assignmentService.js';
 import { logActivity, getLeadTimeline } from '../services/leadActivityService.js';
 import { isValidPhone } from '../utils/phone.js';
 
+const LIST_LEADS_MAX = 5000;
+
+function parseListLimit(raw) {
+  if (raw === 'all' || raw === '0') return LIST_LEADS_MAX;
+  const n = parseInt(raw || String(LIST_LEADS_MAX), 10);
+  if (!Number.isFinite(n) || n < 1) return LIST_LEADS_MAX;
+  return Math.min(n, LIST_LEADS_MAX);
+}
+
 export const listLeads = asyncHandler(async (req, res) => {
   const where = buildLeadWhere(req.query, req.employeeScopeId);
-  const page = parseInt(req.query.page || '1', 10);
-  const limit = parseInt(req.query.limit || '20', 10);
+  const page = Math.max(1, parseInt(req.query.page || '1', 10) || 1);
+  const limit = parseListLimit(req.query.limit);
   const skip = (page - 1) * limit;
 
   const [leads, total] = await Promise.all([
@@ -22,7 +31,17 @@ export const listLeads = asyncHandler(async (req, res) => {
     prisma.lead.count({ where }),
   ]);
 
-  res.json({ success: true, data: leads, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  res.json({
+    success: true,
+    data: leads,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+      showing: leads.length,
+    },
+  });
 });
 
 export const getLead = asyncHandler(async (req, res) => {

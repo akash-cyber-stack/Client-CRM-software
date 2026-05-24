@@ -36,14 +36,16 @@ export default function Leads() {
   const [form, setForm] = useState(emptyForm);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [deleting, setDeleting] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const load = async () => {
     setLoading(true);
     setListError('');
     try {
       const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
-      const res = await leadsApi.list(params);
+      const res = await leadsApi.list({ ...params, limit: 'all', page: 1 });
       setLeads(res.data.data || []);
+      setTotalCount(res.data.pagination?.total ?? res.data.data?.length ?? 0);
       setSelectedIds(new Set());
     } catch (err) {
       const msg = getApiErrorMessage(err, 'Failed to load leads');
@@ -240,6 +242,15 @@ export default function Leads() {
 
       {loading ? <LoadingSpinner /> : (
         <div className="card overflow-x-auto">
+          {leads.length > 0 && (
+            <p className="text-xs text-muted px-4 pt-3 pb-1">
+              Showing <strong className="text-main">{leads.length}</strong>
+              {totalCount > leads.length ? ` of ${totalCount}` : ''} leads
+              {totalCount > leads.length && (
+                <span className="text-amber-400"> — increase limit or use filters</span>
+              )}
+            </p>
+          )}
           <table className="w-full text-sm min-w-[680px]">
             <thead>
               <tr className="text-left text-muted border-b">
