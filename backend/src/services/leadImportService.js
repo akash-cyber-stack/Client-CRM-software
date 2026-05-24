@@ -1,17 +1,13 @@
 import prisma from '../config/db.js';
 import { normalizePhone, isValidPhone } from '../utils/phone.js';
 import { logActivity } from './leadActivityService.js';
-const VALID_SOURCES = new Set(['GOOGLE_ADS', 'META_ADS', 'MANUAL']);
 const VALID_STATUSES = new Set([
   'NEW', 'ASSIGNED', 'CONTACTED', 'INTERESTED', 'FOLLOW_UP',
   'CONVERTED', 'NOT_INTERESTED', 'LOST',
 ]);
 
-function parseSource(value) {
-  const raw = String(value || 'MANUAL').trim().toUpperCase().replace(/\s+/g, '_');
-  if (VALID_SOURCES.has(raw)) return raw;
-  if (raw.includes('GOOGLE')) return 'GOOGLE_ADS';
-  if (raw.includes('META') || raw.includes('FACEBOOK')) return 'META_ADS';
+/** Bulk file import — always manual entry (no Google/Meta from spreadsheet). */
+function parseImportSource() {
   return 'MANUAL';
 }
 
@@ -129,7 +125,7 @@ export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId
       email: raw.email ? String(raw.email).trim() : null,
       city: raw.city ? String(raw.city).trim() : null,
       requirement: raw.requirement ? String(raw.requirement).trim() : null,
-      source: parseSource(raw.source),
+      source: parseImportSource(),
       campaignName: raw.campaignName ? String(raw.campaignName).trim() : null,
       status: parseStatus(raw.status, true),
       assignedToId,

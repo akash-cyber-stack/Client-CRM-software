@@ -5,8 +5,6 @@ import { downloadLeadImportTemplate } from '../utils/leadImportSample';
 import { leadsApi } from '../api';
 import { getApiErrorMessage } from '../utils/apiError';
 import { useToast } from '../context/ToastContext';
-import { SOURCE_LABELS } from '../utils/constants';
-
 export default function ImportLeadsModal({ open, onClose, employees, onSuccess }) {
   const toast = useToast();
   const [parsing, setParsing] = useState(false);
@@ -90,9 +88,12 @@ export default function ImportLeadsModal({ open, onClose, employees, onSuccess }
     <Modal open={open} onClose={handleClose} title="Import Leads" size="xl">
       <div className="space-y-4">
         <p className="text-sm text-muted">
-          Upload Excel (.xlsx) or CSV — including Meta/Facebook lead exports ({' '}
-        <code className="text-xs">full_name</code>, <code className="text-xs">phone_number</code>
-        ). Preview rows, then import. Duplicate phones are skipped.
+          Upload Excel (.xlsx) or CSV from your spreadsheet export. We map columns like{' '}
+          <span className="text-main font-medium">full_name</span>,{' '}
+          <span className="text-main font-medium">phone_number</span>,{' '}
+          <span className="text-main font-medium">email</span>,{' '}
+          <span className="text-main font-medium">state</span> automatically — or use the simple template.
+          Duplicate phones are skipped. All imports are saved as <strong className="text-main">Manual</strong> leads.
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -163,9 +164,8 @@ export default function ImportLeadsModal({ open, onClose, employees, onSuccess }
                         <th className="p-2">Phone</th>
                         <th className="p-2">Email</th>
                         <th className="p-2">City</th>
-                        <th className="p-2">Source</th>
                         <th className="p-2">Campaign</th>
-                        <th className="p-2">Status</th>
+                        <th className="p-2">Notes</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -176,9 +176,8 @@ export default function ImportLeadsModal({ open, onClose, employees, onSuccess }
                           <td className="p-2">{r.phone}</td>
                           <td className="p-2">{r.email || '-'}</td>
                           <td className="p-2">{r.city || '-'}</td>
-                          <td className="p-2">{SOURCE_LABELS[r.source] || r.source}</td>
                           <td className="p-2">{r.campaignName || '-'}</td>
-                          <td className="p-2">{r.status?.replace(/_/g, ' ')}</td>
+                          <td className="p-2 max-w-[200px] truncate" title={r.notes}>{r.notes || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -198,6 +197,7 @@ export default function ImportLeadsModal({ open, onClose, employees, onSuccess }
                     <thead>
                       <tr className="text-muted border-b">
                         <th className="p-2 text-left">Row</th>
+                        <th className="p-2 text-left">Name</th>
                         <th className="p-2 text-left">Phone</th>
                         <th className="p-2 text-left">Reason</th>
                       </tr>
@@ -206,6 +206,7 @@ export default function ImportLeadsModal({ open, onClose, employees, onSuccess }
                       {invalidRows.slice(0, 50).map((item) => (
                         <tr key={item.rowNumber} className="border-b border-default">
                           <td className="p-2">{item.rowNumber}</td>
+                          <td className="p-2">{item.row?.customerName || '-'}</td>
                           <td className="p-2">{item.row?.phone || '-'}</td>
                           <td className="p-2 text-red-400">{item.reason}</td>
                         </tr>
