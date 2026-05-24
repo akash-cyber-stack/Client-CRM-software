@@ -265,6 +265,140 @@ header,
   .light .alert-success {
     @apply bg-green-50 text-green-700 border-green-200;
   }
+
+  /* Split auth (login / register) */
+  .auth-split {
+    background-color: var(--auth-panel-bg, #f4f6f9);
+  }
+  .dark .auth-split {
+    --auth-panel-bg: #0f1419;
+  }
+  .light .auth-split {
+    --auth-panel-bg: #f4f6f9;
+  }
+
+  .auth-panel {
+    background-color: var(--auth-panel-bg);
+    min-height: 100dvh;
+  }
+
+  .auth-panel-top {
+    @apply flex items-center justify-between px-4 sm:px-8 pt-6;
+  }
+
+  .auth-logo {
+    @apply w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg;
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  }
+
+  .auth-form-title {
+    @apply text-2xl sm:text-3xl font-bold text-main tracking-tight;
+  }
+
+  .auth-form-subtitle {
+    @apply text-muted mt-2 text-sm sm:text-base;
+  }
+
+  .auth-label {
+    @apply block text-sm font-medium text-main mb-1.5;
+  }
+
+  .auth-input {
+    @apply py-2.5;
+  }
+
+  .auth-password-toggle {
+    @apply absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-main text-sm;
+  }
+
+  .auth-link {
+    @apply text-primary-600 font-semibold hover:underline;
+  }
+  .dark .auth-link {
+    @apply text-primary-400;
+  }
+
+  .auth-marketing {
+    @apply flex-1 relative;
+    background: linear-gradient(145deg, #0c1929 0%, #132238 45%, #1e3a5f 100%);
+    min-height: 320px;
+  }
+
+  .auth-marketing-mobile {
+    background: linear-gradient(145deg, #0c1929 0%, #1e3a5f 100%);
+  }
+
+  .auth-marketing-glow {
+    @apply absolute rounded-full blur-3xl pointer-events-none;
+  }
+  .auth-marketing-glow-a {
+    width: 280px;
+    height: 280px;
+    top: -80px;
+    right: -40px;
+    background: rgba(59, 130, 246, 0.35);
+  }
+  .auth-marketing-glow-b {
+    width: 220px;
+    height: 220px;
+    bottom: 20%;
+    left: -60px;
+    background: rgba(99, 102, 241, 0.25);
+  }
+
+  .auth-check-icon {
+    @apply w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+  }
+
+  .auth-cta-btn {
+    @apply inline-flex items-center justify-center px-8 py-3 rounded-lg font-semibold text-white transition-all;
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+  }
+  .auth-cta-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.5);
+  }
+
+  .auth-mock-dashboard {
+    @apply rounded-xl overflow-hidden border border-white/10 shadow-2xl;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+  }
+
+  .auth-mock-dashboard-header {
+    @apply flex items-center gap-2 px-4 py-2 border-b border-white/10;
+  }
+
+  .auth-mock-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .auth-mock-dashboard-body {
+    @apply p-4;
+  }
+
+  .auth-mock-stat {
+    @apply rounded-lg p-2.5;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .auth-mock-stat-label {
+    @apply text-[10px] text-slate-400 uppercase tracking-wide;
+  }
+
+  .auth-mock-stat-value {
+    @apply text-lg font-bold mt-0.5;
+  }
+
+  .auth-mock-chart {
+    @apply flex items-end justify-between gap-2 h-20 pt-2;
+  }
+
+  .auth-mock-bar {
+    @apply flex-1 rounded-t-md bg-gradient-to-t from-blue-600 to-blue-400 min-h-[8px];
+  }
 }
 
 /* Scrollbar */

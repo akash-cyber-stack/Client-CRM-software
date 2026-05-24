@@ -3,14 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api';
 import ThemeToggle from '../components/ThemeToggle';
+import AuthMarketingPanel from '../components/auth/AuthMarketingPanel';
+
+const REMEMBER_KEY = 'crm-remember-email';
 
 export default function Login() {
-  const [tab, setTab] = useState('signin');
-  const [email, setEmail] = useState('');
+  const [mode, setMode] = useState('signin');
+  const [email, setEmail] = useState(() => localStorage.getItem(REMEMBER_KEY) || '');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState('SUPER_ADMIN');
+  const [role, setRole] = useState('SALES_EMPLOYEE');
+  const [remember, setRemember] = useState(!!localStorage.getItem(REMEMBER_KEY));
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [setup, setSetup] = useState({ hasSuperAdmin: false, canRegisterSuperAdmin: true });
@@ -29,19 +34,26 @@ export default function Login() {
       .catch(() => {});
   }, []);
 
+  const switchMode = (next) => {
+    setMode(next);
+    setError('');
+  };
+
   const handleSignIn = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
+      if (remember) localStorage.setItem(REMEMBER_KEY, email);
+      else localStorage.removeItem(REMEMBER_KEY);
       await login(email, password);
       navigate('/');
     } catch (err) {
       if (!err.response) {
-        setError('Server not reachable. Wait 2 min after Vercel deploy, then Ctrl+Shift+R.');
+        setError('Cannot reach server. Check your connection or try again shortly.');
       } else {
         const msg = err.response?.data?.message;
-        setError(msg || (err.response?.status === 500 ? 'Server error — check Vercel env vars & redeploy' : 'Login failed'));
+        setError(msg || (err.response?.status === 500 ? 'Server error — contact your admin' : 'Invalid email or password'));
       }
     } finally {
       setLoading(false);
@@ -62,10 +74,10 @@ export default function Login() {
       navigate('/');
     } catch (err) {
       if (!err.response) {
-        setError('Server not reachable. Check Vercel deploy logs & DATABASE_URL (Neon pooled).');
+        setError('Cannot reach server. Check your connection or try again shortly.');
       } else {
         const msg = err.response?.data?.message;
-        setError(msg || (err.response?.status === 500 ? 'Server error — check Vercel env vars & redeploy' : 'Registration failed'));
+        setError(msg || 'Registration failed. Please check your details.');
       }
     } finally {
       setLoading(false);
@@ -73,118 +85,162 @@ export default function Login() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: 'var(--bg-auth)' }}
-    >
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full blur-3xl dark:opacity-40" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl" />
-      </div>
-
-      <div className="absolute top-5 right-5 z-10">
-        <ThemeToggle />
-      </div>
-
-      <div className="auth-card w-full max-w-md relative z-10 mx-2 sm:mx-0">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-primary-600 flex items-center justify-center text-white text-xl font-bold shadow-glow mb-4">
-            SL
+    <div className="auth-split min-h-screen min-h-[100dvh] flex flex-col lg:flex-row">
+      {/* Left — sign in / register */}
+      <div className="auth-panel flex-1 flex flex-col">
+        <div className="auth-panel-top">
+          <div className="flex items-center gap-3">
+            <div className="auth-logo">SL</div>
+            <div>
+              <p className="font-bold text-main text-lg leading-tight">Sales Lead CRM</p>
+              <p className="text-xs text-muted">Lead & call management</p>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-main">Sales Lead CRM</h1>
-          <p className="text-muted mt-2">
-            {tab === 'signin' ? 'Sign in to your account' : 'Create your account'}
-          </p>
+          <ThemeToggle />
         </div>
 
-        <div className="auth-tabs">
-          <button
-            type="button"
-            onClick={() => { setTab('signin'); setError(''); }}
-            className={`auth-tab ${tab === 'signin' ? 'auth-tab-active' : ''}`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTab('register'); setError(''); }}
-            className={`auth-tab ${tab === 'register' ? 'auth-tab-active' : ''}`}
-          >
-            Register
-          </button>
-        </div>
+        <div className="auth-panel-center flex-1 flex items-center justify-center px-4 sm:px-8 py-8">
+          <div className="auth-form-wrap w-full max-w-[420px]">
+            <h1 className="auth-form-title">
+              {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+            </h1>
+            <p className="auth-form-subtitle">
+              {mode === 'signin'
+                ? 'Sign in to manage leads, calls, and your team.'
+                : 'Join your workspace in under a minute.'}
+            </p>
 
-        {error && <div className="alert-error mb-4">{error}</div>}
+            {error && <div className="alert-error mt-5">{error}</div>}
 
-        {tab === 'signin' ? (
-          <form onSubmit={handleSignIn} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-main mb-2">Email</label>
-              <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@company.com" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-main mb-2">Password</label>
-              <input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
-            </div>
-            <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleRegister} className="space-y-4">
-            {!setup.hasSuperAdmin && (
-              <div className="alert-warn">
-                No Super Admin yet. Register once as <strong>Super Admin</strong> (only one allowed).
-              </div>
+            {mode === 'signin' ? (
+              <form onSubmit={handleSignIn} className="mt-6 space-y-4">
+                <div>
+                  <label className="auth-label" htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    className="input auth-input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    placeholder="you@company.com"
+                  />
+                </div>
+                <div>
+                  <label className="auth-label" htmlFor="password">Password</label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      className="input auth-input pr-11"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                      placeholder="Enter your password"
+                    />
+                    <button
+                      type="button"
+                      className="auth-password-toggle"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? '🙈' : '👁'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <label className="flex items-center gap-2 text-muted cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
+                      className="rounded border-default"
+                    />
+                    Remember me
+                  </label>
+                </div>
+
+                <button type="submit" className="btn-primary w-full py-3 text-base font-semibold" disabled={loading}>
+                  {loading ? 'Signing in…' : 'Sign in'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister} className="mt-6 space-y-3">
+                {!setup.hasSuperAdmin && (
+                  <div className="alert-warn">
+                    First user can register as <strong>Super Admin</strong> (one-time only).
+                  </div>
+                )}
+                <div>
+                  <label className="auth-label">Full name</label>
+                  <input className="input auth-input" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name" />
+                </div>
+                <div>
+                  <label className="auth-label">Email</label>
+                  <input type="email" className="input auth-input" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@company.com" />
+                </div>
+                <div>
+                  <label className="auth-label">Phone</label>
+                  <input className="input auth-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" />
+                </div>
+                <div>
+                  <label className="auth-label">Password</label>
+                  <input type="password" className="input auth-input" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required placeholder="Min. 6 characters" />
+                </div>
+                <div>
+                  <label className="auth-label">Role</label>
+                  <select className="input auth-input" value={role} onChange={(e) => setRole(e.target.value)}>
+                    <option value="SALES_EMPLOYEE">Sales Employee</option>
+                    <option value="MANAGER">Manager</option>
+                    {!setup.hasSuperAdmin && <option value="SUPER_ADMIN">Super Admin (setup)</option>}
+                  </select>
+                </div>
+                <button type="submit" className="btn-primary w-full py-3 text-base font-semibold mt-2" disabled={loading}>
+                  {loading ? 'Creating account…' : 'Create account'}
+                </button>
+              </form>
             )}
-            <div>
-              <label className="block text-sm font-medium text-main mb-2">Full Name</label>
-              <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-main mb-2">Email</label>
-              <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-main mb-2">Phone</label>
-              <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-main mb-2">Password</label>
-              <input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-main mb-2">Role</label>
-              <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
-                <option value="SALES_EMPLOYEE">Sales Employee</option>
-                <option value="MANAGER">Manager</option>
-                {!setup.hasSuperAdmin && <option value="SUPER_ADMIN">Super Admin (one-time)</option>}
-              </select>
-              {setup.hasSuperAdmin && (
-                <p className="text-xs text-muted mt-2">Super Admin already exists.</p>
+
+            <div className="auth-panel-footer mt-8 pt-6 border-t border-default text-center text-sm text-muted">
+              {mode === 'signin' ? (
+                <>
+                  New to Sales Lead CRM?{' '}
+                  <button type="button" className="auth-link" onClick={() => switchMode('register')}>
+                    Create an account
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button type="button" className="auth-link" onClick={() => switchMode('signin')}>
+                    Sign in
+                  </button>
+                </>
               )}
             </div>
-            <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
-              {loading ? 'Creating account...' : 'Register'}
-            </button>
-          </form>
-        )}
+          </div>
+        </div>
 
-        <p className="text-xs text-muted mt-8 text-center">
-          {tab === 'signin' ? (
-            <>New user?{' '}
-              <button type="button" className="text-primary-500 font-semibold hover:underline" onClick={() => setTab('register')}>
-                Register here
-              </button>
-            </>
-          ) : (
-            <>Have an account?{' '}
-              <button type="button" className="text-primary-500 font-semibold hover:underline" onClick={() => setTab('signin')}>
-                Sign in
-              </button>
-            </>
-          )}
+        <p className="auth-legal text-center text-xs text-subtle pb-6 px-4">
+          By continuing, you agree to use this CRM only for authorized business purposes.
         </p>
+      </div>
+
+      {/* Right — marketing (desktop) */}
+      <AuthMarketingPanel onGetStarted={() => switchMode('register')} />
+
+      {/* Mobile marketing strip */}
+      <div className="lg:hidden auth-marketing-mobile px-6 py-8 text-center">
+        <p className="text-white font-semibold text-lg mb-2">Grow faster with Sales Lead CRM</p>
+        <p className="text-slate-300 text-sm mb-4">Leads, calls, follow-ups & team performance — one dashboard.</p>
+        {mode === 'signin' && (
+          <button type="button" className="auth-cta-btn mx-auto" onClick={() => switchMode('register')}>
+            Create free account
+          </button>
+        )}
       </div>
     </div>
   );
