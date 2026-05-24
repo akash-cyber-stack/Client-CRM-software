@@ -20,7 +20,7 @@
 3. **Settings → Git**
    - Repository: `akash-cyber-stack/Client-CRM-software`
    - Production branch: **`main`**
-4. **Deployments** → top deployment → **⋯** → **Redeploy** → check **Use existing Build Cache** = **OFF**
+4. **Deployments** → **Create Deployment** (branch **`main`**) — **NOT** "Redeploy" on old `807fffe` row (that keeps old code). See [VERCEL-FIX-OLD-REDEPLOY.md](./VERCEL-FIX-OLD-REDEPLOY.md).
 5. Wait until **Ready** (1–3 min)
 6. Browser: **Ctrl + Shift + R** on https://ar-crm-iota.vercel.app
 
