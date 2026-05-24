@@ -90,7 +90,9 @@ export default function ImportLeadsModal({ open, onClose, employees, onSuccess }
     <Modal open={open} onClose={handleClose} title="Import Leads" size="xl">
       <div className="space-y-4">
         <p className="text-sm text-muted">
-          Upload Excel (.xlsx) or CSV. Preview rows, then import. Duplicate phones are skipped.
+          Upload Excel (.xlsx) or CSV — including Meta/Facebook lead exports ({' '}
+        <code className="text-xs">full_name</code>, <code className="text-xs">phone_number</code>
+        ). Preview rows, then import. Duplicate phones are skipped.
         </p>
 
         <div className="flex flex-wrap gap-2">
