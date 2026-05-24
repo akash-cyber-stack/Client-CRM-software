@@ -307,8 +307,8 @@ header,
     @apply flex items-center justify-between px-5 sm:px-10 pt-7 pb-2;
   }
 
-  .auth-form-brand {
-    @apply flex items-center gap-3;
+  .auth-form-brand-text {
+    @apply min-w-0;
   }
 
   .auth-form-brand-name {
@@ -316,32 +316,55 @@ header,
   }
 
   .auth-form-brand-tag {
-    @apply text-[11px] text-muted uppercase tracking-widest mt-0.5;
+    @apply text-[12px] text-muted mt-0.5 font-normal normal-case tracking-normal;
   }
 
-  .auth-logo-mark {
-    @apply shrink-0;
+  .auth-logo {
+    @apply shrink-0 relative;
   }
 
-  .auth-logo-bg {
-    fill: #18181b;
+  .auth-logo--sm {
+    width: 2.25rem;
+    height: 2.25rem;
   }
-  .dark .auth-logo-bg {
+
+  .auth-logo--md {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .auth-logo--lg {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .auth-logo-svg {
+    @apply w-full h-full block;
+    filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.2));
+  }
+
+  .auth-logo-surface {
+    fill: #141416;
+  }
+
+  .light .auth-logo-surface {
     fill: #fafafa;
   }
-  .light .auth-logo-bg {
-    fill: #18181b;
+
+  .auth-logo-glyph {
+    stroke: #e4e4e7;
   }
 
-  .auth-logo-stroke {
-    stroke: #fafafa;
-  }
-  .light .auth-logo-stroke {
-    stroke: #fafafa;
+  .light .auth-logo-glyph {
+    stroke: #27272a;
   }
 
-  .auth-logo-dot {
-    fill: #3b82f6;
+  .auth-logo-accent {
+    opacity: 0.95;
+  }
+
+  .auth-form-brand {
+    @apply flex items-center gap-3.5;
   }
 
   .auth-form-body {

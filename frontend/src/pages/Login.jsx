@@ -92,10 +92,10 @@ export default function Login() {
       <section className="auth-form-panel flex-1 flex flex-col">
         <header className="auth-form-header">
           <div className="auth-form-brand">
-            <AuthLogo />
-            <div>
+            <AuthLogo size="lg" />
+            <div className="auth-form-brand-text">
               <p className="auth-form-brand-name">Sales Lead CRM</p>
-              <p className="auth-form-brand-tag">Workspace</p>
+              <p className="auth-form-brand-tag">Lead &amp; call management</p>
             </div>
           </div>
           <ThemeToggle />
