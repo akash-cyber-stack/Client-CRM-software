@@ -4,6 +4,9 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 /** Roles that appear in performance charts / detail (not Super Admin) */
 const PERFORMANCE_ROLES = ['SALES_EMPLOYEE', 'MANAGER'];
 
+/** Leads captured via ad platforms (not Excel / manual import). */
+const AD_LEAD_SOURCES = ['GOOGLE_ADS', 'META_ADS'];
+
 function dateFilter(query) {
   const filter = {};
   if (query.fromDate || query.toDate) {
@@ -34,6 +37,7 @@ export const dashboard = asyncHandler(async (req, res) => {
     missedCalls,
     sourceBreakdown,
     campaignBreakdown,
+    nonCampaignLeadsCount,
     employeePerformance,
     myPendingLeads,
   ] = await Promise.all([
@@ -60,8 +64,15 @@ export const dashboard = asyncHandler(async (req, res) => {
     prisma.lead.groupBy({ by: ['source'], where: leadWhere, _count: true }),
     prisma.lead.groupBy({
       by: ['campaignName'],
-      where: { ...leadWhere, campaignName: { not: null } },
+      where: {
+        ...leadWhere,
+        source: { in: AD_LEAD_SOURCES },
+        campaignName: { not: null },
+      },
       _count: true,
+    }),
+    prisma.lead.count({
+      where: { ...leadWhere, source: 'MANUAL' },
     }),
     scopeId
       ? null
@@ -103,6 +114,7 @@ export const dashboard = asyncHandler(async (req, res) => {
       campaignBreakdown: campaignBreakdown
         .filter((c) => c.campaignName)
         .map((c) => ({ campaign: c.campaignName, count: c._count })),
+      nonCampaignLeadsCount,
       employeePerformance: employeePerformance?.map((e) => ({
         id: e.id,
         name: e.name,
@@ -174,7 +186,11 @@ export const callReport = asyncHandler(async (req, res) => {
 
 export const campaignReport = asyncHandler(async (req, res) => {
   const where = dateFilter(req.query);
-  if (req.query.source) where.source = req.query.source;
+  if (req.query.source) {
+    where.source = req.query.source;
+  } else {
+    where.source = { in: AD_LEAD_SOURCES };
+  }
 
   const campaigns = await prisma.lead.groupBy({
     by: ['campaignName', 'source'],

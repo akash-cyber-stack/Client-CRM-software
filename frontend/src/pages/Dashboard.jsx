@@ -115,32 +115,53 @@ export default function Dashboard() {
           />
         )}
 
-        {isAdmin && data.campaignBreakdown?.length > 0 && (
-          <Link
-            to="/reports?tab=campaigns"
-            className="card lg:col-span-2 block hover:border-primary-500/40 transition-all active:scale-[0.99] no-underline"
-          >
-            <h2 className="font-semibold mb-2 text-main">Campaign-wise Leads</h2>
-            <p className="text-xs text-primary-500 mb-4">Tap for campaign report →</p>
-            <div className="overflow-x-auto -mx-2 px-2">
-              <table className="w-full text-sm min-w-[240px]">
-                <thead>
-                  <tr className="table-head">
-                    <th>Campaign</th>
-                    <th>Count</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.campaignBreakdown.map((c, i) => (
-                    <tr key={i} className="table-row table-row-hover">
-                      <td className="text-main">{c.campaign}</td>
-                      <td className="font-medium text-main">{c.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Link>
+        {isAdmin && (
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link
+              to="/reports?tab=campaigns"
+              className="card block hover:border-primary-500/40 transition-all active:scale-[0.99] no-underline h-full"
+            >
+              <h2 className="font-semibold mb-1 text-main">Ad campaign leads</h2>
+              <p className="text-xs text-muted mb-4">Google Ads &amp; Meta only — tap for report →</p>
+              {data.campaignBreakdown?.length > 0 ? (
+                <div className="overflow-x-auto -mx-2 px-2">
+                  <table className="w-full text-sm min-w-[200px]">
+                    <thead>
+                      <tr className="table-head">
+                        <th>Campaign</th>
+                        <th>Count</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.campaignBreakdown.map((c) => (
+                        <tr key={c.campaign} className="table-row table-row-hover">
+                          <td className="text-main">{c.campaign}</td>
+                          <td className="font-medium text-main">{c.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted py-6 text-center">No ad campaign leads yet</p>
+              )}
+            </Link>
+
+            <Link
+              to="/leads?source=MANUAL"
+              className="card block hover:border-amber-500/30 transition-all active:scale-[0.99] no-underline h-full"
+            >
+              <h2 className="font-semibold mb-1 text-main">Without campaign (manual / import)</h2>
+              <p className="text-xs text-muted mb-4">Excel import &amp; manual entry — not from ads</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <p className="text-4xl font-bold text-amber-400 tabular-nums">
+                  {data.nonCampaignLeadsCount ?? 0}
+                </p>
+                <p className="text-sm text-muted mt-2">leads</p>
+              </div>
+              <p className="text-xs text-primary-500 text-center">View manual leads →</p>
+            </Link>
+          </div>
         )}
       </div>
 

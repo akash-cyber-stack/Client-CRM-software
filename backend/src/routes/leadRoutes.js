@@ -4,6 +4,7 @@ import {
   getLead,
   createLead,
   bulkImportLeads,
+  bulkDeleteLeads,
   updateLead,
   deleteLead,
   assignLead,
@@ -19,6 +20,7 @@ router.use(authenticate, scopeToEmployee);
 router.get('/', listLeads);
 router.post('/', authorize('SUPER_ADMIN', 'MANAGER'), createLead);
 router.post('/bulk-import', authorize('SUPER_ADMIN', 'MANAGER'), bulkImportLeads);
+router.post('/bulk-delete', authorize('SUPER_ADMIN', 'MANAGER'), bulkDeleteLeads);
 router.get('/:id', getLead);
 router.put('/:id', updateLead);
 router.delete('/:id', authorize('SUPER_ADMIN', 'MANAGER'), deleteLead);

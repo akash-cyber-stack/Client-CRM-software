@@ -179,10 +179,39 @@ export const updateLead = asyncHandler(async (req, res) => {
   res.json({ success: true, data: lead });
 });
 
+async function deleteLeadsByIds(ids) {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (!uniqueIds.length) return 0;
+
+  await prisma.callLog.updateMany({
+    where: { leadId: { in: uniqueIds } },
+    data: { leadId: null, isLinked: false },
+  });
+
+  const result = await prisma.lead.deleteMany({ where: { id: { in: uniqueIds } } });
+  return result.count;
+}
+
 export const deleteLead = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  await prisma.lead.delete({ where: { id } });
+  const deleted = await deleteLeadsByIds([id]);
+  if (!deleted) {
+    return res.status(404).json({ success: false, message: 'Lead not found' });
+  }
   res.json({ success: true, message: 'Lead deleted' });
+});
+
+export const bulkDeleteLeads = asyncHandler(async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) {
+    return res.status(400).json({ success: false, message: 'ids array is required' });
+  }
+  const deletedCount = await deleteLeadsByIds(ids);
+  res.json({
+    success: true,
+    message: `${deletedCount} lead(s) deleted`,
+    data: { deletedCount },
+  });
 });
 
 export const assignLead = asyncHandler(async (req, res) => {

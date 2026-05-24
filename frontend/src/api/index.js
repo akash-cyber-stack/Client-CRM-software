@@ -20,6 +20,7 @@ export const leadsApi = {
   get: (id) => client.get(`/leads/${id}`),
   create: (data) => client.post('/leads', data),
   bulkImport: (data) => client.post('/leads/bulk-import', data),
+  bulkDelete: (ids) => client.post('/leads/bulk-delete', { ids }),
   update: (id, data) => client.put(`/leads/${id}`, data),
   remove: (id) => client.delete(`/leads/${id}`),
   assign: (id, employeeId) => client.post(`/leads/${id}/assign`, { employeeId }),

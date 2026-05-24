@@ -34,6 +34,8 @@ export default function Leads() {
   const [manualOpen, setManualOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -42,6 +44,7 @@ export default function Leads() {
       const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
       const res = await leadsApi.list(params);
       setLeads(res.data.data || []);
+      setSelectedIds(new Set());
     } catch (err) {
       const msg = getApiErrorMessage(err, 'Failed to load leads');
       setListError(msg);
@@ -101,6 +104,66 @@ export default function Leads() {
 
   const salesEmployees = employees.filter((e) => e.role === 'SALES_EMPLOYEE' && e.status === 'ACTIVE');
 
+  const selectedCount = selectedIds.size;
+  const allOnPageSelected = leads.length > 0 && leads.every((l) => selectedIds.has(l.id));
+  const someOnPageSelected = leads.some((l) => selectedIds.has(l.id));
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllOnPage = () => {
+    if (allOnPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        leads.forEach((l) => next.delete(l.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        leads.forEach((l) => next.add(l.id));
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteOne = async (lead) => {
+    if (!confirm(`Delete lead #${lead.leadNumber} (${lead.customerName})? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await leadsApi.remove(lead.id);
+      toast.success('Lead deleted');
+      await load();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Delete failed'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} selected lead(s)? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      const res = await leadsApi.bulkDelete(ids);
+      const count = res.data.data?.deletedCount ?? ids.length;
+      toast.success(`Deleted ${count} lead(s)`);
+      await load();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Bulk delete failed'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="page-enter">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -151,11 +214,50 @@ export default function Leads() {
         <button type="button" className="btn-secondary w-full sm:w-auto" onClick={load}>Filter</button>
       </div>
 
+      {isAdmin && selectedCount > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
+          <span className="text-sm text-main font-medium">
+            {selectedCount} selected
+          </span>
+          <button
+            type="button"
+            className="text-sm font-semibold text-red-400 hover:text-red-300 disabled:opacity-50"
+            disabled={deleting}
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear selection
+          </button>
+          <button
+            type="button"
+            className="btn-secondary text-sm !border-red-500/40 !text-red-400 hover:!bg-red-500/15 ml-auto"
+            disabled={deleting}
+            onClick={handleDeleteSelected}
+          >
+            {deleting ? 'Deleting…' : `Delete selected (${selectedCount})`}
+          </button>
+        </div>
+      )}
+
       {loading ? <LoadingSpinner /> : (
         <div className="card overflow-x-auto">
-          <table className="w-full text-sm min-w-[600px]">
+          <table className="w-full text-sm min-w-[680px]">
             <thead>
               <tr className="text-left text-muted border-b">
+                {isAdmin && (
+                  <th className="pb-3 pr-3 w-10">
+                    <input
+                      type="checkbox"
+                      className="auth-checkbox"
+                      checked={allOnPageSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someOnPageSelected && !allOnPageSelected;
+                      }}
+                      onChange={toggleSelectAllOnPage}
+                      aria-label="Select all leads on this page"
+                      disabled={!leads.length || deleting}
+                    />
+                  </th>
+                )}
                 <th className="pb-3 pr-4">#</th>
                 <th className="pb-3 pr-4">Customer</th>
                 <th className="pb-3 pr-4">Phone</th>
@@ -168,7 +270,22 @@ export default function Leads() {
             </thead>
             <tbody>
               {leads.map((l) => (
-                <tr key={l.id} className="border-b border-default table-row-hover">
+                <tr
+                  key={l.id}
+                  className={`border-b border-default table-row-hover ${selectedIds.has(l.id) ? 'bg-primary-500/5' : ''}`}
+                >
+                  {isAdmin && (
+                    <td className="py-3 pr-3">
+                      <input
+                        type="checkbox"
+                        className="auth-checkbox"
+                        checked={selectedIds.has(l.id)}
+                        onChange={() => toggleSelect(l.id)}
+                        aria-label={`Select lead ${l.customerName}`}
+                        disabled={deleting}
+                      />
+                    </td>
+                  )}
                   <td className="py-3 pr-4">#{l.leadNumber}</td>
                   <td className="py-3 pr-4 font-medium">{l.customerName}</td>
                   <td className="py-3 pr-4">{l.phone}</td>
@@ -177,7 +294,19 @@ export default function Leads() {
                   <td className="py-3 pr-4">{l.assignedTo?.name || '-'}</td>
                   <td className="py-3 pr-4">{formatDate(l.createdAt)}</td>
                   <td className="py-3">
-                    <Link to={`/leads/${l.id}`} className="text-primary-600 hover:underline">View</Link>
+                    <div className="flex items-center gap-3">
+                      <Link to={`/leads/${l.id}`} className="text-primary-600 hover:underline">View</Link>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="text-red-400 hover:text-red-300 text-sm disabled:opacity-50"
+                          disabled={deleting}
+                          onClick={() => handleDeleteOne(l)}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

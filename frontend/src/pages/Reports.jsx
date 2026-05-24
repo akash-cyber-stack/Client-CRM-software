@@ -217,7 +217,10 @@ export default function Reports() {
               </tbody>
             </table>
           )}
-          {tab === 'campaigns' && Array.isArray(data) && (
+          {tab === 'campaigns' && Array.isArray(data) && data.length === 0 && (
+            <p className="text-muted text-sm py-6">No ad campaign leads in this date range. Manual / Excel imports appear under Leads → filter Manual.</p>
+          )}
+          {tab === 'campaigns' && Array.isArray(data) && data.length > 0 && (
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-muted border-b">
