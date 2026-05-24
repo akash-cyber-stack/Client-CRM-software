@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api';
 import ThemeToggle from '../components/ThemeToggle';
 import AuthMarketingPanel from '../components/auth/AuthMarketingPanel';
+import AuthModeSwitch from '../components/auth/AuthModeSwitch';
+import AuthLogo from '../components/auth/AuthLogo';
+import { IconEye, IconEyeOff } from '../components/auth/AuthIcons';
 
 const REMEMBER_KEY = 'crm-remember-email';
 
@@ -85,41 +88,48 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-split min-h-screen min-h-[100dvh] flex flex-col lg:flex-row">
-      {/* Left — sign in / register */}
-      <div className="auth-panel flex-1 flex flex-col">
-        <div className="auth-panel-top">
-          <div className="flex items-center gap-3">
-            <div className="auth-logo">SL</div>
+    <div className="auth-page min-h-screen min-h-[100dvh] flex flex-col lg:flex-row">
+      <section className="auth-form-panel flex-1 flex flex-col">
+        <header className="auth-form-header">
+          <div className="auth-form-brand">
+            <AuthLogo />
             <div>
-              <p className="font-bold text-main text-lg leading-tight">Sales Lead CRM</p>
-              <p className="text-xs text-muted">Lead & call management</p>
+              <p className="auth-form-brand-name">Sales Lead CRM</p>
+              <p className="auth-form-brand-tag">Workspace</p>
             </div>
           </div>
           <ThemeToggle />
-        </div>
+        </header>
 
-        <div className="auth-panel-center flex-1 flex items-center justify-center px-4 sm:px-8 py-8">
-          <div className="auth-form-wrap w-full max-w-[420px]">
+        <div className="auth-form-body flex-1 flex items-center justify-center px-5 sm:px-10 py-8">
+          <div className="auth-form-card w-full max-w-[400px]">
+            <AuthModeSwitch mode={mode} onChange={switchMode} />
+
             <h1 className="auth-form-title">
               {mode === 'signin' ? 'Welcome back' : 'Create your account'}
             </h1>
             <p className="auth-form-subtitle">
               {mode === 'signin'
-                ? 'Sign in to manage leads, calls, and your team.'
-                : 'Join your workspace in under a minute.'}
+                ? 'Enter your credentials to open your workspace.'
+                : 'Set up access for your team in under a minute.'}
             </p>
 
-            {error && <div className="alert-error mt-5">{error}</div>}
+            {error && (
+              <div className="auth-form-error" role="alert">
+                {error}
+              </div>
+            )}
 
             {mode === 'signin' ? (
-              <form onSubmit={handleSignIn} className="mt-6 space-y-4">
-                <div>
-                  <label className="auth-label" htmlFor="email">Email</label>
+              <form onSubmit={handleSignIn} className="auth-form-fields">
+                <div className="auth-field">
+                  <label className="auth-label" htmlFor="email">
+                    Email
+                  </label>
                   <input
                     id="email"
                     type="email"
-                    className="input auth-input"
+                    className="auth-input"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -127,120 +137,139 @@ export default function Login() {
                     placeholder="you@company.com"
                   />
                 </div>
-                <div>
-                  <label className="auth-label" htmlFor="password">Password</label>
-                  <div className="relative">
+                <div className="auth-field">
+                  <label className="auth-label" htmlFor="password">
+                    Password
+                  </label>
+                  <div className="auth-input-wrap">
                     <input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
-                      className="input auth-input pr-11"
+                      className="auth-input auth-input-padded"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       autoComplete="current-password"
-                      placeholder="Enter your password"
+                      placeholder="Your password"
                     />
                     <button
                       type="button"
-                      className="auth-password-toggle"
+                      className="auth-input-action"
                       onClick={() => setShowPassword((v) => !v)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showPassword ? '🙈' : '👁'}
+                      {showPassword ? <IconEyeOff /> : <IconEye />}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 text-sm">
-                  <label className="flex items-center gap-2 text-muted cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={remember}
-                      onChange={(e) => setRemember(e.target.checked)}
-                      className="rounded border-default"
-                    />
-                    Remember me
-                  </label>
-                </div>
+                <label className="auth-remember">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="auth-checkbox"
+                  />
+                  <span>Remember this device</span>
+                </label>
 
-                <button type="submit" className="btn-primary w-full py-3 text-base font-semibold" disabled={loading}>
-                  {loading ? 'Signing in…' : 'Sign in'}
+                <button type="submit" className="auth-submit" disabled={loading}>
+                  {loading ? 'Signing in…' : 'Continue to workspace'}
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleRegister} className="mt-6 space-y-3">
+              <form onSubmit={handleRegister} className="auth-form-fields auth-form-fields-tight">
                 {!setup.hasSuperAdmin && (
-                  <div className="alert-warn">
-                    First user can register as <strong>Super Admin</strong> (one-time only).
+                  <div className="auth-form-notice">
+                    First signup becomes <strong>Super Admin</strong> (one-time).
                   </div>
                 )}
-                <div>
+                <div className="auth-field">
                   <label className="auth-label">Full name</label>
-                  <input className="input auth-input" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name" />
+                  <input
+                    className="auth-input"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    placeholder="Your name"
+                  />
                 </div>
-                <div>
+                <div className="auth-field">
                   <label className="auth-label">Email</label>
-                  <input type="email" className="input auth-input" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@company.com" />
+                  <input
+                    type="email"
+                    className="auth-input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="you@company.com"
+                  />
                 </div>
-                <div>
+                <div className="auth-field">
                   <label className="auth-label">Phone</label>
-                  <input className="input auth-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" />
+                  <input
+                    className="auth-input"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Optional"
+                  />
                 </div>
-                <div>
+                <div className="auth-field">
                   <label className="auth-label">Password</label>
-                  <input type="password" className="input auth-input" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required placeholder="Min. 6 characters" />
+                  <input
+                    type="password"
+                    className="auth-input"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    minLength={6}
+                    required
+                    placeholder="Min. 6 characters"
+                  />
                 </div>
-                <div>
+                <div className="auth-field">
                   <label className="auth-label">Role</label>
-                  <select className="input auth-input" value={role} onChange={(e) => setRole(e.target.value)}>
+                  <select className="auth-input auth-select" value={role} onChange={(e) => setRole(e.target.value)}>
                     <option value="SALES_EMPLOYEE">Sales Employee</option>
                     <option value="MANAGER">Manager</option>
                     {!setup.hasSuperAdmin && <option value="SUPER_ADMIN">Super Admin (setup)</option>}
                   </select>
                 </div>
-                <button type="submit" className="btn-primary w-full py-3 text-base font-semibold mt-2" disabled={loading}>
-                  {loading ? 'Creating account…' : 'Create account'}
+                <button type="submit" className="auth-submit" disabled={loading}>
+                  {loading ? 'Creating account…' : 'Create workspace'}
                 </button>
               </form>
             )}
 
-            <div className="auth-panel-footer mt-8 pt-6 border-t border-default text-center text-sm text-muted">
+            <p className="auth-form-switch">
               {mode === 'signin' ? (
                 <>
-                  New to Sales Lead CRM?{' '}
-                  <button type="button" className="auth-link" onClick={() => switchMode('register')}>
-                    Create an account
+                  No account yet?{' '}
+                  <button type="button" className="auth-text-link" onClick={() => switchMode('register')}>
+                    Register
                   </button>
                 </>
               ) : (
                 <>
-                  Already have an account?{' '}
-                  <button type="button" className="auth-link" onClick={() => switchMode('signin')}>
+                  Already registered?{' '}
+                  <button type="button" className="auth-text-link" onClick={() => switchMode('signin')}>
                     Sign in
                   </button>
                 </>
               )}
-            </div>
+            </p>
           </div>
         </div>
 
-        <p className="auth-legal text-center text-xs text-subtle pb-6 px-4">
-          By continuing, you agree to use this CRM only for authorized business purposes.
+        <p className="auth-form-legal">
+          Authorized business use only. By continuing you accept your organization&apos;s policies.
         </p>
-      </div>
+      </section>
 
-      {/* Right — marketing (desktop) */}
       <AuthMarketingPanel onGetStarted={() => switchMode('register')} />
 
-      {/* Mobile marketing strip */}
-      <div className="lg:hidden auth-marketing-mobile px-6 py-8 text-center">
-        <p className="text-white font-semibold text-lg mb-2">Grow faster with Sales Lead CRM</p>
-        <p className="text-slate-300 text-sm mb-4">Leads, calls, follow-ups & team performance — one workspace.</p>
-        {mode === 'signin' && (
-          <button type="button" className="auth-cta-btn mx-auto" onClick={() => switchMode('register')}>
-            Create free account
-          </button>
-        )}
+      <div className="lg:hidden auth-mobile-banner">
+        <p className="auth-mobile-banner-title">Sales Lead CRM</p>
+        <p className="auth-mobile-banner-text">Leads, calls & follow-ups in one workspace.</p>
       </div>
     </div>
   );

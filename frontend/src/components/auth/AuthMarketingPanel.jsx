@@ -1,56 +1,73 @@
-import AuthAuroraVisual from './AuthAuroraVisual';
+import AuthBrandArt from './AuthBrandArt';
+import { IconArrowRight } from './AuthIcons';
 
-const PILLARS = [
-  { icon: '⚡', title: 'Capture', text: 'Ads, Meta & manual leads' },
-  { icon: '◎', title: 'Assign', text: 'Round-robin or bulk import' },
-  { icon: '☎', title: 'Connect', text: 'IVR, calls & follow-ups' },
-  { icon: '◈', title: 'Control', text: 'Roles for every team member' },
+const CAPABILITIES = [
+  {
+    n: '01',
+    title: 'Capture every lead',
+    desc: 'Google Ads, Meta, imports — one intake layer.',
+  },
+  {
+    n: '02',
+    title: 'Route with intent',
+    desc: 'Round-robin or manager assignment, no leakage.',
+  },
+  {
+    n: '03',
+    title: 'Close the loop',
+    desc: 'IVR logs, follow-ups, and performance in sync.',
+  },
 ];
 
 export default function AuthMarketingPanel({ onGetStarted }) {
   return (
-    <div className="auth-marketing hidden lg:flex relative overflow-hidden">
-      <AuthAuroraVisual />
+    <aside className="auth-brand hidden lg:flex" aria-label="Product overview">
+      <div className="auth-brand-noise" />
+      <div className="auth-brand-vignette" />
 
-      <div className="auth-marketing-scrim" />
+      <div className="auth-brand-inner">
+        <header className="auth-brand-header">
+          <span className="auth-brand-tag">Sales operations</span>
+        </header>
 
-      <div className="auth-marketing-content relative z-10 flex flex-col justify-between p-10 xl:p-14 min-h-full w-full">
-        <div>
-          <p className="auth-marketing-eyebrow">Sales Lead CRM</p>
-          <h2 className="auth-marketing-headline">
-            Clarity for every
-            <span className="auth-marketing-headline-accent"> conversation.</span>
+        <div className="auth-brand-main">
+          <h2 className="auth-brand-title">
+            Sell with
+            <em> signal,</em>
+            <br />
+            not noise.
           </h2>
-          <p className="auth-marketing-lead">
-            Built for sales teams who want focus — not another cluttered screen. Sign in and get to
-            work in seconds.
+          <p className="auth-brand-desc">
+            A focused workspace for leads, calls, and handoffs — designed so reps spend time talking,
+            not clicking.
           </p>
-        </div>
 
-        <div>
-          <div className="auth-pillar-grid">
-            {PILLARS.map((p) => (
-              <div key={p.title} className="auth-pillar">
-                <span className="auth-pillar-icon" aria-hidden>
-                  {p.icon}
-                </span>
+          <ul className="auth-brand-list">
+            {CAPABILITIES.map((item) => (
+              <li key={item.n} className="auth-brand-list-item">
+                <span className="auth-brand-list-n">{item.n}</span>
                 <div>
-                  <p className="auth-pillar-title">{p.title}</p>
-                  <p className="auth-pillar-text">{p.text}</p>
+                  <p className="auth-brand-list-title">{item.title}</p>
+                  <p className="auth-brand-list-desc">{item.desc}</p>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
-
-          <button type="button" onClick={onGetStarted} className="auth-cta-btn auth-cta-btn-wide mt-8">
-            Create free account
-          </button>
-
-          <p className="auth-marketing-footnote mt-6">
-            Free to start · No credit card · Your data stays in your workspace
-          </p>
+          </ul>
         </div>
+
+        <AuthBrandArt />
+
+        <footer className="auth-brand-footer">
+          <blockquote className="auth-brand-quote">
+            <p>“Finally a CRM that doesn’t fight the sales floor.”</p>
+            <cite>— Operations lead, mid-market team</cite>
+          </blockquote>
+          <button type="button" onClick={onGetStarted} className="auth-brand-cta">
+            <span>Start free workspace</span>
+            <IconArrowRight />
+          </button>
+        </footer>
       </div>
-    </div>
+    </aside>
   );
 }
