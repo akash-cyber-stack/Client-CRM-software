@@ -1,6 +1,6 @@
 import prisma from '../config/db.js';
 import { getAssignmentMethod } from './settingsService.js';
-import { createNotification } from './notificationService.js';
+import { createNotification, notifyOnLeadAssignment } from './notificationService.js';
 import { logActivity } from './leadActivityService.js';
 
 /** Get active sales employees for round-robin */
@@ -68,7 +68,7 @@ export async function autoAssignLead(leadId) {
   return assignLeadRoundRobin(leadId);
 }
 
-export async function manualAssignLead(leadId, employeeId) {
+export async function manualAssignLead(leadId, employeeId, { assignedBy } = {}) {
   const employee = await prisma.user.findFirst({
     where: { id: employeeId, role: { in: ['SALES_EMPLOYEE', 'MANAGER'] }, status: 'ACTIVE' },
   });
@@ -85,12 +85,12 @@ export async function manualAssignLead(leadId, employeeId) {
     method: 'MANUAL',
   });
 
-  await createNotification({
-    userId: employeeId,
-    type: 'LEAD_ASSIGNED',
-    title: 'New lead assigned',
-    message: `Lead ${lead.customerName} has been assigned to you.`,
-    leadId,
+  await notifyOnLeadAssignment({
+    lead,
+    assigneeId: employeeId,
+    assignedBy: assignedBy
+      ? { id: assignedBy.id, name: assignedBy.name, role: assignedBy.role }
+      : null,
   });
 
   return lead;

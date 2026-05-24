@@ -6,6 +6,39 @@ export async function createNotification({ userId, type, title, message, leadId,
   });
 }
 
+const ADMIN_ASSIGN_ROLES = ['SUPER_ADMIN', 'ADMIN'];
+
+/** Notify assignee + managers when an admin/super-admin assigns a lead */
+export async function notifyOnLeadAssignment({ lead, assigneeId, assignedBy }) {
+  await createNotification({
+    userId: assigneeId,
+    type: 'LEAD_ASSIGNED',
+    title: 'New lead assigned',
+    message: `Lead ${lead.customerName} has been assigned to you.`,
+    leadId: lead.id,
+  });
+
+  if (!assignedBy || !ADMIN_ASSIGN_ROLES.includes(assignedBy.role)) return;
+
+  const assigneeName = lead.assignedTo?.name || 'a team member';
+  const managers = await prisma.user.findMany({
+    where: { role: 'MANAGER', status: 'ACTIVE', id: { not: assigneeId } },
+    select: { id: true },
+  });
+
+  await Promise.all(
+    managers.map((m) =>
+      createNotification({
+        userId: m.id,
+        type: 'LEAD_ASSIGNED',
+        title: 'Lead assigned to team',
+        message: `${assignedBy.name} assigned ${lead.customerName} to ${assigneeName}.`,
+        leadId: lead.id,
+      })
+    )
+  );
+}
+
 /** Avoid spam — skip if same type+lead (+title) exists within dedupeHours */
 export async function createNotificationIfNew({
   userId,

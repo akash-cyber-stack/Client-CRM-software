@@ -1,6 +1,9 @@
 import prisma from '../config/db.js';
 import { normalizePhone, isValidPhone } from '../utils/phone.js';
 import { logActivity } from './leadActivityService.js';
+import { createNotification } from './notificationService.js';
+
+const ADMIN_ASSIGN_ROLES = ['SUPER_ADMIN', 'ADMIN'];
 const VALID_STATUSES = new Set([
   'NEW', 'ASSIGNED', 'CONTACTED', 'INTERESTED', 'FOLLOW_UP',
   'CONVERTED', 'NOT_INTERESTED', 'LOST',
@@ -48,7 +51,7 @@ function resolveAssignee(row, { assignmentMode, assignToEmployeeId, employees, r
  * @param {'ROUND_ROBIN'|'ASSIGN_TO'} params.assignmentMode
  * @param {string} [params.assignToEmployeeId]
  */
-export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId }) {
+export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId, assignedBy }) {
   const totalRows = rows.length;
   const failed = [];
   const duplicates = [];
@@ -136,10 +139,12 @@ export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId
   let importedCount = 0;
   const CHUNK = 50;
   let lastAssignedId = null;
+  const allCreated = [];
 
   for (let i = 0; i < toCreate.length; i += CHUNK) {
     const chunk = toCreate.slice(i, i + CHUNK);
     const created = await prisma.lead.createManyAndReturn({ data: chunk });
+    allCreated.push(...created);
     importedCount += created.length;
     lastAssignedId = chunk[chunk.length - 1]?.assignedToId || lastAssignedId;
 
@@ -151,6 +156,45 @@ export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId
         })
       )
     );
+  }
+
+  if (allCreated.length) {
+    const byAssignee = new Map();
+    for (const lead of allCreated) {
+      if (!lead.assignedToId) continue;
+      byAssignee.set(lead.assignedToId, (byAssignee.get(lead.assignedToId) || 0) + 1);
+    }
+
+    await Promise.all(
+      [...byAssignee.entries()].map(([userId, count]) =>
+        createNotification({
+          userId,
+          type: 'LEAD_ASSIGNED',
+          title: count === 1 ? 'New lead assigned' : `${count} new leads assigned`,
+          message:
+            count === 1
+              ? 'A lead was imported and assigned to you.'
+              : `${count} leads were imported and assigned to you.`,
+        })
+      )
+    );
+
+    if (assignedBy && ADMIN_ASSIGN_ROLES.includes(assignedBy.role)) {
+      const managers = await prisma.user.findMany({
+        where: { role: 'MANAGER', status: 'ACTIVE' },
+        select: { id: true },
+      });
+      await Promise.all(
+        managers.map((m) =>
+          createNotification({
+            userId: m.id,
+            type: 'LEAD_ASSIGNED',
+            title: 'Team leads assigned',
+            message: `${assignedBy.name} imported ${importedCount} lead(s) and assigned them to your team.`,
+          })
+        )
+      );
+    }
   }
 
   if (assignmentMode === 'ROUND_ROBIN' && lastAssignedId) {

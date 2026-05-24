@@ -2,7 +2,7 @@ import { createContext, useContext, useCallback, useEffect, useRef, useState } f
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { notificationsApi } from '../api';
-import { getNotificationPrefs } from '../utils/notificationPrefs';
+import { getNotificationPrefs, requestDesktopPermission } from '../utils/notificationPrefs';
 import { playNotificationSound, showDesktopNotification } from '../utils/notificationSound';
 import NotificationToast from '../components/NotificationToast';
 
@@ -15,6 +15,12 @@ const TYPE_ICONS = {
   CALL_RECORDING: '🎙️',
   DUPLICATE_LEAD: '🔄',
 };
+
+function pollIntervalMs() {
+  const prefs = getNotificationPrefs();
+  const base = Math.max(10, prefs.pollIntervalSec || 10) * 1000;
+  return typeof document !== 'undefined' && document.hidden ? Math.min(5000, base) : base;
+}
 
 export function NotificationProvider({ children }) {
   const { user } = useAuth();
@@ -52,21 +58,30 @@ export function NotificationProvider({ children }) {
   const alertNew = useCallback(
     (items) => {
       const prefs = getNotificationPrefs();
+      const tabHidden = typeof document !== 'undefined' && document.hidden;
       const fresh = items.filter((n) => !seenIdsRef.current.has(n.id) && !n.isRead);
       if (!fresh.length) return;
 
       fresh.forEach((n) => {
         seenIdsRef.current.add(n.id);
+
         if (prefs.soundEnabled) playNotificationSound();
-        if (prefs.desktopEnabled) {
-          showDesktopNotification({
-            title: n.title,
-            body: n.message,
-            tag: n.id,
-            onClick: () => handleNotificationClick(n),
-          });
+
+        const useDesktop = tabHidden || prefs.desktopEnabled;
+        if (useDesktop && 'Notification' in window) {
+          if (Notification.permission === 'granted') {
+            showDesktopNotification({
+              title: n.title,
+              body: n.message,
+              tag: n.id,
+              onClick: () => handleNotificationClick(n),
+            });
+          } else if (Notification.permission === 'default' && tabHidden) {
+            void requestDesktopPermission();
+          }
         }
-        if (prefs.toastEnabled) {
+
+        if (prefs.toastEnabled && !tabHidden) {
           setToasts((prev) => [
             ...prev.slice(-4),
             { ...n, toastId: `${n.id}-${Date.now()}` },
@@ -121,6 +136,9 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (!user) return undefined;
 
+    const prefs = getNotificationPrefs();
+    if (prefs.desktopEnabled) void requestDesktopPermission();
+
     const init = async () => {
       try {
         const unread = await loadUnread();
@@ -130,12 +148,27 @@ export function NotificationProvider({ children }) {
         /* ignore */
       }
     };
-    init();
+    void init();
 
-    const prefs = getNotificationPrefs();
-    const ms = Math.max(10, prefs.pollIntervalSec || 10) * 1000;
-    const id = setInterval(() => refresh(), ms);
-    return () => clearInterval(id);
+    let intervalId;
+    const schedule = () => {
+      clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        void refresh();
+      }, pollIntervalMs());
+    };
+    schedule();
+
+    const onVisibility = () => {
+      schedule();
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [user, refresh, loadUnread]);
 
   const markAllRead = async () => {

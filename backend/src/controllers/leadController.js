@@ -154,6 +154,7 @@ export const bulkImportLeads = asyncHandler(async (req, res) => {
     rows: leads,
     assignmentMode: mode,
     assignToEmployeeId: assignToEmployeeId || assignedToId,
+    assignedBy: { id: req.user.id, name: req.user.name, role: req.user.role },
   });
 
   res.status(201).json({ success: true, data: result });
@@ -237,7 +238,9 @@ export const assignLead = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { employeeId } = req.body;
   if (!employeeId) return res.status(400).json({ success: false, message: 'employeeId required' });
-  const lead = await manualAssignLead(id, employeeId);
+  const lead = await manualAssignLead(id, employeeId, {
+    assignedBy: { id: req.user.id, name: req.user.name, role: req.user.role },
+  });
   res.json({ success: true, data: lead });
 });
 
