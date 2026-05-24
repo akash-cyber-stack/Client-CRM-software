@@ -235,7 +235,7 @@ export default function Login() {
       {/* Mobile marketing strip */}
       <div className="lg:hidden auth-marketing-mobile px-6 py-8 text-center">
         <p className="text-white font-semibold text-lg mb-2">Grow faster with Sales Lead CRM</p>
-        <p className="text-slate-300 text-sm mb-4">Leads, calls, follow-ups & team performance — one dashboard.</p>
+        <p className="text-slate-300 text-sm mb-4">Leads, calls, follow-ups & team performance — one workspace.</p>
         {mode === 'signin' && (
           <button type="button" className="auth-cta-btn mx-auto" onClick={() => switchMode('register')}>
             Create free account
