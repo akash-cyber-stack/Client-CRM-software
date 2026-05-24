@@ -7,6 +7,15 @@
     <title>Sales Lead CRM</title>
     <script>
       (function () {
+        if (location.hostname === 'ar-crm-iota.vercel.app') {
+          location.replace(
+            'https://ar-crm-iota-pi.vercel.app' +
+              location.pathname +
+              location.search +
+              location.hash
+          );
+          return;
+        }
         var t = localStorage.getItem('crm-theme') || 'dark';
         document.documentElement.classList.remove('light', 'dark');
         document.documentElement.classList.add(t);

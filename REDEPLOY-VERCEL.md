@@ -36,13 +36,11 @@ Dashboard par:
 
 ---
 
-## Temporary correct URL (same code as localhost)
+## Primary URL (naya app — abhi use karein)
 
-If argroupads redeploy abhi nahi kar sakte:
+**https://ar-crm-iota-pi.vercel.app/login**
 
-**https://ar-crm-iota-pi.vercel.app**
-
-(Set same `DATABASE_URL` + env vars on that project too.)
+Purani `ar-crm-iota.vercel.app` ko is par lane ke liye **ar-crm** ko `main` se redeploy karein (redirect code repo mein hai). Details: [VERCEL-DOMAIN-MIGRATION.md](./VERCEL-DOMAIN-MIGRATION.md)
 
 ---
 

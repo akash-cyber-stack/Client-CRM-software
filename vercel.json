@@ -11,6 +11,14 @@
       "includeFiles": "backend/**"
     }
   },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "ar-crm-iota.vercel.app" }],
+      "destination": "https://ar-crm-iota-pi.vercel.app/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }

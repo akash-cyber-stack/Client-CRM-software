@@ -22,10 +22,10 @@ Run both: `npm run dev` from project root.
 
 | URL | Notes |
 |-----|--------|
-| https://ar-crm-iota.vercel.app | Project **ar-crm** (argroupads) — use after redeploy from GitHub `main` |
-| https://ar-crm-iota-pi.vercel.app | Alternate deploy; same code if env vars are set |
+| **https://ar-crm-iota-pi.vercel.app** | **Primary** — project **ar-crm-iota** (latest deploy) |
+| https://ar-crm-iota.vercel.app | Legacy domain — redirects to pi after **ar-crm** redeploy; see [VERCEL-DOMAIN-MIGRATION.md](./VERCEL-DOMAIN-MIGRATION.md) |
 
-Login: https://ar-crm-iota.vercel.app/login
+**Login:** https://ar-crm-iota-pi.vercel.app/login
 
 ---
 

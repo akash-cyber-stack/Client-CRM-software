@@ -1,12 +1,10 @@
 # Fix `ar-crm-iota.vercel.app` (argroupads Vercel project)
 
-Your live app is here:
+**Nayi (sahi) website:** https://ar-crm-iota-pi.vercel.app/login — project **ar-crm-iota** (personal Vercel).
 
-- **Vercel team:** `argroupads-eductions-projects`
-- **Project:** `ar-crm`
-- **URL:** https://ar-crm-iota.vercel.app
+**Purani URL:** https://ar-crm-iota.vercel.app — project **ar-crm** (team **argroupads-eductions**). Latest `main` deploy ke baad yeh URL automatically **pi** par redirect ho jayegi.
 
-The duplicate project `ar-crm-iota` on your personal Vercel account (`ar-crm-iota-pi.vercel.app`) is optional — use **ar-crm** below.
+Full steps: [VERCEL-DOMAIN-MIGRATION.md](./VERCEL-DOMAIN-MIGRATION.md)
 
 ---
 
