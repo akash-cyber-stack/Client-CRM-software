@@ -361,43 +361,312 @@ header,
     box-shadow: 0 12px 28px rgba(37, 99, 235, 0.5);
   }
 
-  .auth-mock-dashboard {
-    @apply rounded-xl overflow-hidden border border-white/10 shadow-2xl;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(12px);
+  /* Login — Live pipeline showcase */
+  .auth-showcase {
+    @apply relative rounded-2xl p-[1px] overflow-hidden;
+    background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.9),
+      rgba(139, 92, 246, 0.7),
+      rgba(34, 211, 238, 0.5),
+      rgba(59, 130, 246, 0.9)
+    );
+    background-size: 300% 300%;
+    animation: auth-border-flow 8s ease infinite;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 24px 48px -12px rgba(0, 0, 0, 0.55),
+      0 0 80px -20px rgba(59, 130, 246, 0.35);
   }
 
-  .auth-mock-dashboard-header {
-    @apply flex items-center gap-2 px-4 py-2 border-b border-white/10;
+  @keyframes auth-border-flow {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
   }
 
-  .auth-mock-dot {
-    @apply w-2 h-2 rounded-full;
+  .auth-showcase-orbit {
+    @apply absolute rounded-full pointer-events-none;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .auth-showcase-orbit-1 {
+    width: 140%;
+    height: 60%;
+    top: -20%;
+    left: -20%;
+    animation: auth-orbit-spin 24s linear infinite;
+  }
+  .auth-showcase-orbit-2 {
+    width: 90%;
+    height: 45%;
+    bottom: -10%;
+    right: -15%;
+    animation: auth-orbit-spin 18s linear infinite reverse;
   }
 
-  .auth-mock-dashboard-body {
-    @apply p-4;
+  @keyframes auth-orbit-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
-  .auth-mock-stat {
-    @apply rounded-lg p-2.5;
-    background: rgba(255, 255, 255, 0.06);
+  .auth-showcase-shell {
+    @apply relative rounded-2xl overflow-hidden;
+    background: linear-gradient(165deg, rgba(8, 15, 30, 0.97) 0%, rgba(15, 30, 55, 0.95) 100%);
+    backdrop-filter: blur(20px);
   }
 
-  .auth-mock-stat-label {
-    @apply text-[10px] text-slate-400 uppercase tracking-wide;
+  .auth-showcase-header {
+    @apply flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10;
   }
 
-  .auth-mock-stat-value {
-    @apply text-lg font-bold mt-0.5;
+  .auth-showcase-header-left {
+    @apply flex items-center gap-2;
   }
 
-  .auth-mock-chart {
-    @apply flex items-end justify-between gap-2 h-20 pt-2;
+  .auth-showcase-live-dot {
+    @apply w-2 h-2 rounded-full bg-emerald-400;
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.8);
+    animation: auth-pulse-live 2s ease-in-out infinite;
   }
 
-  .auth-mock-bar {
-    @apply flex-1 rounded-t-md bg-gradient-to-t from-blue-600 to-blue-400 min-h-[8px];
+  @keyframes auth-pulse-live {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(0.85);
+    }
+  }
+
+  .auth-showcase-header-title {
+    @apply text-xs font-semibold text-white tracking-wide;
+  }
+
+  .auth-showcase-header-badge {
+    @apply text-[10px] font-medium px-2 py-0.5 rounded-full text-slate-300;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .auth-showcase-body {
+    @apply grid gap-3 p-4;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 1280px) {
+    .auth-showcase-body {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+    }
+  }
+
+  .auth-showcase-col-title {
+    @apply text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2;
+  }
+
+  .auth-showcase-ring-wrap {
+    @apply relative mx-auto;
+    width: 120px;
+    height: 120px;
+  }
+
+  .auth-showcase-ring-svg {
+    @apply w-full h-full;
+  }
+
+  .auth-showcase-ring-progress {
+    animation: auth-ring-draw 2.5s ease-out forwards;
+  }
+
+  @keyframes auth-ring-draw {
+    from {
+      stroke-dashoffset: 327;
+    }
+  }
+
+  .auth-showcase-ring-center {
+    @apply absolute inset-0 flex flex-col items-center justify-center;
+  }
+
+  .auth-showcase-ring-value {
+    @apply text-xl font-bold text-white;
+  }
+
+  .auth-showcase-ring-label {
+    @apply text-[9px] text-slate-400 uppercase tracking-wide mt-0.5;
+  }
+
+  .auth-showcase-stages {
+    @apply space-y-2 mt-3;
+  }
+
+  .auth-showcase-stage {
+    @apply flex items-center gap-2 text-[10px];
+  }
+
+  .auth-showcase-stage-dot {
+    @apply w-1.5 h-1.5 rounded-full shrink-0;
+  }
+
+  .auth-showcase-stage-label {
+    @apply text-slate-400 w-10 shrink-0;
+  }
+
+  .auth-showcase-stage-bar {
+    @apply flex-1 h-1 rounded-full overflow-hidden;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .auth-showcase-stage-fill {
+    @apply h-full rounded-full block;
+    width: 0;
+    animation: auth-stage-grow 1.8s ease-out forwards;
+    transform-origin: left;
+  }
+
+  .auth-showcase-stage:nth-child(1) .auth-showcase-stage-fill {
+    animation-delay: 0.2s;
+  }
+  .auth-showcase-stage:nth-child(2) .auth-showcase-stage-fill {
+    animation-delay: 0.45s;
+  }
+  .auth-showcase-stage:nth-child(3) .auth-showcase-stage-fill {
+    animation-delay: 0.7s;
+  }
+
+  @keyframes auth-stage-grow {
+    to {
+      width: var(--stage-w, 100%);
+    }
+  }
+
+  .auth-showcase-leads-stack {
+    @apply space-y-2;
+  }
+
+  .auth-showcase-lead-card {
+    @apply flex items-center gap-2.5 p-2.5 rounded-xl border border-white/10;
+    background: rgba(255, 255, 255, 0.04);
+    animation: auth-lead-float 0.7s ease-out backwards;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+
+  .auth-showcase-lead-card:hover {
+    transform: translateX(4px);
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  @keyframes auth-lead-float {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .auth-showcase-lead-avatar {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+  }
+
+  .auth-showcase-lead-meta {
+    @apply flex-1 min-w-0;
+  }
+
+  .auth-showcase-lead-name {
+    @apply text-xs font-semibold text-white truncate;
+  }
+
+  .auth-showcase-lead-source {
+    @apply text-[10px] text-slate-500 truncate;
+  }
+
+  .auth-showcase-lead-badge {
+    @apply text-[9px] font-semibold px-1.5 py-0.5 rounded-md shrink-0;
+  }
+
+  .auth-showcase-badge-Hot {
+    @apply text-amber-300 bg-amber-500/20;
+  }
+  .auth-showcase-badge-Followup {
+    @apply text-violet-300 bg-violet-500/20;
+  }
+  .auth-showcase-badge-Converted {
+    @apply text-emerald-300 bg-emerald-500/20;
+  }
+
+  .auth-showcase-feed {
+    @apply space-y-2;
+  }
+
+  .auth-showcase-feed-item {
+    @apply pl-3 border-l-2 border-primary-500/50 py-1;
+    animation: auth-feed-in 0.6s ease-out backwards;
+  }
+
+  @keyframes auth-feed-in {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .auth-showcase-feed-time {
+    @apply text-[9px] text-primary-400 font-medium;
+  }
+
+  .auth-showcase-feed-text {
+    @apply text-[10px] text-slate-300 leading-snug mt-0.5;
+  }
+
+  .auth-showcase-footer {
+    @apply px-4 pb-4 pt-2 border-t border-white/10;
+  }
+
+  .auth-showcase-metrics {
+    @apply flex justify-between gap-2 mb-2;
+  }
+
+  .auth-showcase-metric-val {
+    @apply block text-sm font-bold text-white;
+  }
+
+  .auth-showcase-metric-lbl {
+    @apply block text-[9px] text-slate-500 uppercase tracking-wide;
+  }
+
+  .auth-showcase-sparkline {
+    @apply w-full h-10 opacity-90;
+  }
+
+  .auth-showcase-spark-line {
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    animation: auth-spark-draw 2.2s ease-out 0.5s forwards;
+  }
+
+  @keyframes auth-spark-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
   }
 }
 

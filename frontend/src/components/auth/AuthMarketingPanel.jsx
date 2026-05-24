@@ -1,3 +1,5 @@
+import AuthPipelineShowcase from './AuthPipelineShowcase';
+
 const BENEFITS = [
   'Lead capture from Google Ads, Meta & manual entry',
   'Assign leads to sales teams — round-robin or bulk import',
@@ -5,15 +7,6 @@ const BENEFITS = [
   'Role-based access for Admin, Manager & Sales',
   'Dashboards, reports & employee performance tracking',
 ];
-
-function MockStat({ label, value, color }) {
-  return (
-    <div className="auth-mock-stat">
-      <p className="auth-mock-stat-label">{label}</p>
-      <p className={`auth-mock-stat-value ${color}`}>{value}</p>
-    </div>
-  );
-}
 
 export default function AuthMarketingPanel({ onGetStarted }) {
   return (
@@ -48,28 +41,8 @@ export default function AuthMarketingPanel({ onGetStarted }) {
         </button>
       </div>
 
-      <div className="relative z-10 mt-10 auth-mock-dashboard">
-        <div className="auth-mock-dashboard-header">
-          <span className="auth-mock-dot bg-red-400" />
-          <span className="auth-mock-dot bg-amber-400" />
-          <span className="auth-mock-dot bg-emerald-400" />
-          <span className="text-xs text-slate-400 ml-2">Dashboard preview</span>
-        </div>
-        <div className="auth-mock-dashboard-body">
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <MockStat label="Total Leads" value="248" color="text-blue-400" />
-            <MockStat label="Converted" value="42" color="text-emerald-400" />
-            <MockStat label="Follow-ups" value="18" color="text-amber-400" />
-            <MockStat label="Calls today" value="36" color="text-violet-400" />
-          </div>
-          <div className="auth-mock-chart">
-            <div className="auth-mock-bar" style={{ height: '45%' }} />
-            <div className="auth-mock-bar" style={{ height: '70%' }} />
-            <div className="auth-mock-bar" style={{ height: '55%' }} />
-            <div className="auth-mock-bar" style={{ height: '90%' }} />
-            <div className="auth-mock-bar" style={{ height: '60%' }} />
-          </div>
-        </div>
+      <div className="relative z-10 mt-8">
+        <AuthPipelineShowcase />
       </div>
     </div>
   );
