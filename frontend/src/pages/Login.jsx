@@ -275,10 +275,7 @@ export default function Login() {
                 </div>
 
                 {(setup.canRegisterSuperAdmin || workspaceMode === 'create') && (
-                  <div>
-                    <label className="auth-label block mb-2">Select a plan</label>
-                    <PlanSelector plans={plans} selected={selectedPlan} onSelect={setSelectedPlan} />
-                  </div>
+                  <PlanSelector plans={plans} selected={selectedPlan} onSelect={setSelectedPlan} />
                 )}
 
                 <div className="auth-field">
