@@ -44,8 +44,12 @@ export default function Leads() {
     try {
       const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
       const res = await leadsApi.list({ ...params, limit: 'all', page: 1 });
-      setLeads(res.data.data || []);
-      setTotalCount(res.data.pagination?.total ?? res.data.data?.length ?? 0);
+      const nextLeads = Array.isArray(res.data.data) ? res.data.data : [];
+      setLeads(nextLeads);
+      setTotalCount(res.data.pagination?.total ?? nextLeads.length ?? 0);
+      if (!Array.isArray(res.data.data)) {
+        setListError('Unexpected lead response format');
+      }
       setSelectedIds(new Set());
     } catch (err) {
       const msg = getApiErrorMessage(err, 'Failed to load leads');

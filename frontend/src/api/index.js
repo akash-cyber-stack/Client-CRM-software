@@ -26,6 +26,7 @@ export const companiesApi = {
 export const employeesApi = {
   list: (params) => client.get('/employees', { params }),
   create: (data) => client.post('/employees', data),
+  import: (data) => client.post('/employees/import', data),
   update: (id, data) => client.put(`/employees/${id}`, data),
   remove: (id) => client.delete(`/employees/${id}`),
 };
@@ -56,6 +57,8 @@ export const reportsApi = {
 
 export const followUpsApi = {
   list: (params) => client.get('/follow-ups', { params }),
+  dashboard: () => client.get('/follow-ups/dashboard'),
+  complete: (id) => client.patch(`/follow-ups/${id}/complete`),
 };
 
 export const notificationsApi = {

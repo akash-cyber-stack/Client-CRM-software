@@ -25,6 +25,7 @@ export default function Login() {
   const [selectedPlan, setSelectedPlan] = useState('PROFESSIONAL');
   const [plans, setPlans] = useState([]);
   const [setup, setSetup] = useState({ canRegisterSuperAdmin: true });
+  const [workspaceMode, setWorkspaceMode] = useState('create');
   const [paymentSession, setPaymentSession] = useState(null);
   const [remember, setRemember] = useState(!!localStorage.getItem(REMEMBER_KEY));
   const [showPassword, setShowPassword] = useState(false);
@@ -53,7 +54,7 @@ export default function Login() {
     try {
       if (remember) localStorage.setItem(REMEMBER_KEY, email);
       else localStorage.removeItem(REMEMBER_KEY);
-      await login({ email, password });
+      await login({ email, password, companyName });
       navigate('/');
     } catch (err) {
       const data = err.response?.data;
@@ -76,14 +77,15 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
+      const isCreatingWorkspace = setup.canRegisterSuperAdmin || workspaceMode === 'create';
       const payload = {
         name,
         email,
         phone,
         password,
-        role: setup.canRegisterSuperAdmin ? undefined : role,
-        companyName: setup.canRegisterSuperAdmin ? companyName : undefined,
-        plan: setup.canRegisterSuperAdmin ? selectedPlan : undefined,
+        role: isCreatingWorkspace ? undefined : role,
+        companyName: companyName || undefined,
+        plan: isCreatingWorkspace ? selectedPlan : undefined,
       };
       const res = await authApi.register(payload);
       const data = res.data.data;
@@ -192,6 +194,17 @@ export default function Login() {
                   />
                 </div>
                 <div className="auth-field">
+                  <label className="auth-label" htmlFor="companyName">Workspace name</label>
+                  <input
+                    id="companyName"
+                    className="auth-input"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Optional if you have one workspace"
+                    autoComplete="organization"
+                  />
+                </div>
+                <div className="auth-field">
                   <label className="auth-label" htmlFor="password">Password</label>
                   <div className="auth-input-wrap">
                     <input
@@ -231,31 +244,48 @@ export default function Login() {
 
             {mode === 'register' && (
               <form onSubmit={handleRegister} className="auth-form-fields auth-form-fields-tight mt-6">
-                {setup.canRegisterSuperAdmin && (
-                  <>
-                    <div className="auth-field">
-                      <label className="auth-label">Company / workspace name</label>
-                      <input
-                        className="auth-input"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        required
-                        placeholder="Your business name"
-                      />
-                    </div>
-                    <div>
-                      <label className="auth-label block mb-2">Select a plan</label>
-                      <PlanSelector plans={plans} selected={selectedPlan} onSelect={setSelectedPlan} />
-                    </div>
-                  </>
+                {!setup.canRegisterSuperAdmin && (
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      type="button"
+                      className={`auth-submit ${workspaceMode === 'create' ? '' : 'opacity-70'}`}
+                      onClick={() => setWorkspaceMode('create')}
+                    >
+                      Create new workspace
+                    </button>
+                    <button
+                      type="button"
+                      className={`auth-submit ${workspaceMode === 'join' ? '' : 'opacity-70'}`}
+                      onClick={() => setWorkspaceMode('join')}
+                    >
+                      Join existing workspace
+                    </button>
+                  </div>
                 )}
-                {!setup.canRegisterSuperAdmin && setup.hasSuperAdmin && (
-                  <div className="auth-form-notice">Join your existing team workspace.</div>
+
+                <div className="auth-field">
+                  <label className="auth-label">Company / workspace name</label>
+                  <input
+                    className="auth-input"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    required
+                    placeholder={setup.canRegisterSuperAdmin ? 'Your business name' : 'Enter the workspace name'}
+                  />
+                </div>
+
+                {(setup.canRegisterSuperAdmin || workspaceMode === 'create') && (
+                  <div>
+                    <label className="auth-label block mb-2">Select a plan</label>
+                    <PlanSelector plans={plans} selected={selectedPlan} onSelect={setSelectedPlan} />
+                  </div>
                 )}
+
                 <div className="auth-field">
                   <label className="auth-label">Full name</label>
                   <input className="auth-input" value={name} onChange={(e) => setName(e.target.value)} required />
                 </div>
+
                 <div className="auth-field">
                   <label className="auth-label">Email</label>
                   <input type="email" className="auth-input" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -275,7 +305,7 @@ export default function Login() {
                     required
                   />
                 </div>
-                {!setup.canRegisterSuperAdmin && (
+                {workspaceMode === 'join' && !setup.canRegisterSuperAdmin && (
                   <div className="auth-field">
                     <label className="auth-label">Role</label>
                     <select className="auth-input auth-select" value={role} onChange={(e) => setRole(e.target.value)}>
@@ -285,7 +315,7 @@ export default function Login() {
                   </div>
                 )}
                 <button type="submit" className="auth-submit" disabled={loading}>
-                  {loading ? 'Creating…' : setup.canRegisterSuperAdmin ? 'Register & continue to payment' : 'Create account'}
+                  {loading ? 'Creating…' : setup.canRegisterSuperAdmin || workspaceMode === 'create' ? 'Register & continue to payment' : 'Create account'}
                 </button>
               </form>
             )}

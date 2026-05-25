@@ -17,6 +17,14 @@ const userSelect = {
   _count: { select: { assignedLeads: true, callLogs: true } },
 };
 
+function sanitizeRole(role) {
+  return role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : role || 'SALES_EMPLOYEE';
+}
+
+function sanitizeStatus(status) {
+  return status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
+}
+
 export const listEmployees = asyncHandler(async (req, res) => {
   const { status, role, search } = req.query;
   const where = { companyId: req.companyId };
@@ -60,15 +68,91 @@ export const createEmployee = asyncHandler(async (req, res) => {
       email: email.toLowerCase(),
       phone,
       passwordHash,
-      role: role || 'SALES_EMPLOYEE',
+      role: sanitizeRole(role),
       department,
       ivrAgentId,
       ivrExtension,
-      status: status || 'ACTIVE',
+      status: sanitizeStatus(status),
     },
     select: userSelect,
   });
   res.status(201).json({ success: true, data: employee });
+});
+
+export const importEmployees = asyncHandler(async (req, res) => {
+  const { employees = [] } = req.body;
+
+  if (!Array.isArray(employees) || employees.length === 0) {
+    return res.status(400).json({ success: false, message: 'employees array is required' });
+  }
+
+  const normalizedEmployees = employees.map((employee) => ({
+    name: String(employee.name || '').trim(),
+    email: String(employee.email || '').trim().toLowerCase(),
+    phone: employee.phone ? String(employee.phone).trim() : null,
+    password: String(employee.password || '').trim(),
+    role: sanitizeRole(employee.role),
+    department: employee.department ? String(employee.department).trim() : 'Sales',
+    ivrAgentId: employee.ivrAgentId ? String(employee.ivrAgentId).trim() : null,
+    ivrExtension: employee.ivrExtension ? String(employee.ivrExtension).trim() : null,
+    status: sanitizeStatus(employee.status),
+  }));
+
+  const invalidRows = normalizedEmployees.filter((employee) => {
+    if (!employee.name || !employee.email || !employee.password) return true;
+    if (employee.role === 'SUPER_ADMIN') return true;
+    return false;
+  });
+
+  if (invalidRows.length) {
+    return res.status(400).json({
+      success: false,
+      message: 'Each employee must include name, email, and password. Super Admin cannot be imported.',
+    });
+  }
+
+  const existingEmployees = await prisma.user.findMany({
+    where: {
+      companyId: req.companyId,
+      email: { in: normalizedEmployees.map((employee) => employee.email) },
+    },
+    select: { email: true },
+  });
+
+  const existingEmails = new Set(existingEmployees.map((employee) => employee.email));
+  const rowsToCreate = [];
+
+  for (const employee of normalizedEmployees) {
+    if (!existingEmails.has(employee.email)) {
+      rowsToCreate.push(employee);
+    }
+  }
+
+  for (const employee of rowsToCreate) {
+    const passwordHash = await bcrypt.hash(employee.password, 10);
+    await prisma.user.create({
+      data: {
+        companyId: req.companyId,
+        name: employee.name,
+        email: employee.email,
+        phone: employee.phone,
+        passwordHash,
+        role: employee.role,
+        department: employee.department,
+        ivrAgentId: employee.ivrAgentId,
+        ivrExtension: employee.ivrExtension,
+        status: employee.status,
+      },
+    });
+  }
+
+  res.status(201).json({
+    success: true,
+    data: {
+      createdCount: rowsToCreate.length,
+      duplicateCount: normalizedEmployees.length - rowsToCreate.length,
+    },
+  });
 });
 
 export const updateEmployee = asyncHandler(async (req, res) => {

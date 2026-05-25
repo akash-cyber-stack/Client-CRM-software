@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { employeesApi } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ImportEmployeesModal from '../components/ImportEmployeesModal';
 import { getApiErrorMessage } from '../utils/apiError';
 import { ROLES, PERFORMANCE_ROLES } from '../utils/constants';
 
@@ -13,12 +15,14 @@ const emptyForm = {
 };
 
 export default function Employees() {
+  const { user } = useAuth();
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
@@ -88,12 +92,23 @@ export default function Employees() {
     }
   };
 
+  // Employee add limit for STARTER plan
+  const isStarter = user?.plan === 'STARTER';
+  const employeeLimit = isStarter ? 5 : Infinity;
+  const atLimit = employees.length >= employeeLimit;
+
   return (
     <div className="page-enter">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 gap-3">
         <h1 className="text-2xl font-bold">Employees</h1>
-        <button className="btn-primary" onClick={openCreate}>+ Add Employee</button>
+        <div className="flex gap-2">
+          <button className="btn-secondary" onClick={() => setImportOpen(true)}>Import Employees</button>
+          <button className="btn-primary" onClick={openCreate} disabled={atLimit} title={atLimit ? 'Starter plan allows up to 5 employees' : ''}>+ Add Employee</button>
+        </div>
       </div>
+      {atLimit && (
+        <div className="mb-4 text-amber-600 font-medium">Starter plan allows up to 5 employees. Upgrade your plan to add more.</div>
+      )}
 
       {loading ? <LoadingSpinner /> : (
         <div className="card overflow-x-auto">
@@ -166,6 +181,12 @@ export default function Employees() {
           </button>
         </form>
       </Modal>
+
+      <ImportEmployeesModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={load}
+      />
     </div>
   );
 }

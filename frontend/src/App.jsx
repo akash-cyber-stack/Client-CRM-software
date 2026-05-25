@@ -15,6 +15,7 @@ import FollowUps from './pages/FollowUps';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import LoadingSpinner from './components/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -33,14 +34,14 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="leads" element={<Leads />} />
-        <Route path="leads/:id" element={<LeadDetail />} />
-        <Route path="employees" element={<ProtectedRoute adminOnly><Employees /></ProtectedRoute>} />
-        <Route path="employees/:id/performance" element={<EmployeePerformance />} />
-        <Route path="calls" element={<ProtectedRoute adminOnly><CallHistory /></ProtectedRoute>} />
-        <Route path="follow-ups" element={<FollowUps />} />
-        <Route path="reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
-        <Route path="settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
+        <Route path="leads" element={<ProtectedRoute requiredFeature="leads"><Leads /></ProtectedRoute>} />
+        <Route path="leads/:id" element={<ProtectedRoute requiredFeature="leads"><LeadDetail /></ProtectedRoute>} />
+        <Route path="employees" element={<ProtectedRoute adminOnly requiredFeature="employees"><Employees /></ProtectedRoute>} />
+        <Route path="employees/:id/performance" element={<ProtectedRoute adminOnly requiredFeature="employees"><EmployeePerformance /></ProtectedRoute>} />
+        <Route path="calls" element={<ProtectedRoute adminOnly requiredFeature="calls"><CallHistory /></ProtectedRoute>} />
+        <Route path="follow-ups" element={<ProtectedRoute requiredFeature="follow-ups"><FollowUps /></ProtectedRoute>} />
+        <Route path="reports" element={<ProtectedRoute adminOnly requiredFeature="reports"><Reports /></ProtectedRoute>} />
+        <Route path="settings" element={<ProtectedRoute adminOnly requiredFeature="settings"><Settings /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
@@ -52,7 +53,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>

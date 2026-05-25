@@ -14,6 +14,7 @@ const TABS = [
 ];
 
 export default function FollowUps() {
+  try {
   const { isAdmin } = useAuth();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -21,9 +22,11 @@ export default function FollowUps() {
   const [followUps, setFollowUps] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setLoading(true);
+    setError('');
     Promise.all([
       followUpsApi.list({ type }),
       followUpsApi.dashboard(),
@@ -32,7 +35,11 @@ export default function FollowUps() {
         setFollowUps(listRes.data.data);
         setDashboard(dashRes.data.data);
       })
-      .catch((err) => toast.error(getApiErrorMessage(err, 'Failed to load follow-ups')))
+      .catch((err) => {
+        const msg = getApiErrorMessage(err, 'Failed to load follow-ups');
+        setError(msg);
+        toast.error(msg);
+      })
       .finally(() => setLoading(false));
   }, [type]);
 
@@ -85,25 +92,34 @@ export default function FollowUps() {
       </div>
 
       {loading ? <LoadingSpinner /> : (
-        <div className="space-y-3">
-          {followUps.map((f) => (
-            <div key={f.id} className="card flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <Link to={`/leads/${f.lead.id}`} className="font-semibold text-primary-600 hover:underline">
-                  {f.lead.customerName}
-                </Link>
-                <p className="text-sm text-muted">{f.lead.phone} &middot; {formatDate(f.scheduledAt)}</p>
-                {f.remarks && <p className="text-sm mt-1">{f.remarks}</p>}
-                {isAdmin && <p className="text-xs text-subtle">Employee: {f.employee?.name}</p>}
+        error ? (
+          <div className="text-center py-12 text-red-600 card font-medium">{error}</div>
+        ) : Array.isArray(followUps) && followUps.length === 0 ? (
+          <div className="text-center py-12 text-muted card">No follow-ups found or you do not have access to this feature in your plan.</div>
+        ) : !Array.isArray(followUps) ? (
+          <div className="text-center py-12 text-red-600 card font-medium">Unexpected error: followUps data is not an array.</div>
+        ) : (
+          <div className="space-y-3">
+            {followUps.map((f) => (
+              <div key={f.id} className="card flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <Link to={`/leads/${f.lead.id}`} className="font-semibold text-primary-600 hover:underline">
+                    {f.lead.customerName}
+                  </Link>
+                  <p className="text-sm text-muted">{f.lead.phone} &middot; {formatDate(f.scheduledAt)}</p>
+                  {f.remarks && <p className="text-sm mt-1">{f.remarks}</p>}
+                  {isAdmin && <p className="text-xs text-subtle">Employee: {f.employee?.name}</p>}
+                </div>
+                <button className="btn-primary text-sm" onClick={() => complete(f.id)}>Mark Complete</button>
               </div>
-              <button className="btn-primary text-sm" onClick={() => complete(f.id)}>Mark Complete</button>
-            </div>
-          ))}
-          {followUps.length === 0 && (
-            <p className="text-center py-12 text-muted card">No follow-ups in this category</p>
-          )}
-        </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );
+  } catch (err) {
+    console.error('FollowUps page error:', err);
+    return <div className="text-center py-12 text-red-600 card font-medium">Error: {err.message || String(err)}</div>;
+  }
 }

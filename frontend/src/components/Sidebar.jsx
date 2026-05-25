@@ -1,15 +1,16 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLayout } from '../context/LayoutContext';
+import { canAccessFeature } from '../utils/planAccess';
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: '📊' },
-  { to: '/leads', label: 'Leads', icon: '👥' },
-  { to: '/employees', label: 'Employees', icon: '👔', adminOnly: true },
-  { to: '/calls', label: 'Call History', icon: '📞', adminOnly: true },
-  { to: '/follow-ups', label: 'Follow-ups', icon: '📅' },
-  { to: '/reports', label: 'Reports', icon: '📈', adminOnly: true },
-  { to: '/settings', label: 'Settings', icon: '⚙️', adminOnly: true },
+  { to: '/', label: 'Dashboard', icon: '📊', feature: 'dashboard' },
+  { to: '/leads', label: 'Leads', icon: '👥', feature: 'leads' },
+  { to: '/employees', label: 'Employees', icon: '👔', adminOnly: true, feature: 'employees' },
+  { to: '/calls', label: 'Call History', icon: '📞', adminOnly: true, feature: 'calls' },
+  { to: '/follow-ups', label: 'Follow-ups', icon: '📅', feature: 'follow-ups' },
+  { to: '/reports', label: 'Reports', icon: '📈', adminOnly: true, feature: 'reports' },
+  { to: '/settings', label: 'Settings', icon: '⚙️', adminOnly: true, feature: 'settings' },
 ];
 
 export default function Sidebar() {
@@ -63,6 +64,7 @@ export default function Sidebar() {
         <nav className="flex-1 p-3 sm:p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             if (item.adminOnly && !isAdmin) return null;
+            if (item.feature && !canAccessFeature(user?.plan, item.feature)) return null;
             return (
               <NavLink
                 key={item.to}

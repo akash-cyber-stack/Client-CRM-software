@@ -5,7 +5,6 @@ import { env } from '../config/env.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   createCompany,
-  getDefaultCompany,
   hasSuperAdminGlobally,
   hasSuperAdminInCompany,
   assertSubscriptionActive,
@@ -27,6 +26,45 @@ function issueToken(user) {
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn }
   );
+}
+
+function normalizeWorkspaceName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+async function getCompanyByWorkspaceName(workspaceName) {
+  const normalized = normalizeWorkspaceName(workspaceName);
+  if (!normalized) return null;
+
+  return prisma.company.findFirst({
+    where: { name: { equals: normalized, mode: 'insensitive' } },
+  });
+}
+
+async function resolveCompanyForExistingWorkspace(companyName) {
+  return getCompanyByWorkspaceName(companyName);
+}
+
+async function resolveLoginUser(emailLower, companyName) {
+  const candidates = await prisma.user.findMany({
+    where: { email: emailLower, status: 'ACTIVE' },
+    include: { company: true },
+  });
+
+  if (!candidates.length) return { user: null, message: 'Invalid email or password' };
+  if (candidates.length === 1) return { user: candidates[0], message: null };
+
+  const normalizedCompanyName = normalizeWorkspaceName(companyName);
+  if (!normalizedCompanyName) {
+    return { user: null, message: 'Please enter your workspace name to continue.' };
+  }
+
+  const matched = candidates.find((candidate) => normalizeWorkspaceName(candidate.company?.name) === normalizedCompanyName);
+  if (!matched) {
+    return { user: null, message: 'Workspace name does not match this email.' };
+  }
+
+  return { user: matched, message: null };
 }
 
 export const setupStatus = asyncHandler(async (_req, res) => {
@@ -57,35 +95,11 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   const emailLower = email.toLowerCase();
-  const existingEmail = await prisma.user.findFirst({ where: { email: emailLower } });
-  if (existingEmail) {
-    return res.status(409).json({ success: false, message: 'Email already registered. Please sign in.' });
-  }
+  const existingCompany = await resolveCompanyForExistingWorkspace(companyName);
 
-  const canCreateWorkspace = !(await hasSuperAdminGlobally());
-  let company;
-  let userRole = 'SALES_EMPLOYEE';
-
-  if (canCreateWorkspace) {
-    if (!companyName) {
-      return res.status(400).json({ success: false, message: 'Company / workspace name is required' });
-    }
-    const selectedPlan = plan && getPlan(plan) ? plan : 'STARTER';
-    company = await createCompany({
-      name: companyName,
-      plan: selectedPlan,
-      contactEmail: emailLower,
-      contactPhone: phone || null,
-    });
-    userRole = 'SUPER_ADMIN';
-  } else {
-    company = await getDefaultCompany();
-    if (!company) {
-      return res.status(400).json({ success: false, message: 'No workspace available. Contact your admin.' });
-    }
-
+  if (existingCompany) {
     const requestedRole = role || 'SALES_EMPLOYEE';
-    const superAdminExists = await hasSuperAdminInCompany(company.id);
+    const superAdminExists = await hasSuperAdminInCompany(existingCompany.id);
 
     if (requestedRole === 'SUPER_ADMIN') {
       if (superAdminExists) {
@@ -94,15 +108,12 @@ export const register = asyncHandler(async (req, res) => {
           message: 'Super Admin already exists. Register as Manager or Sales Employee.',
         });
       }
-      userRole = 'SUPER_ADMIN';
-    } else if (['MANAGER', 'SALES_EMPLOYEE'].includes(requestedRole)) {
-      userRole = requestedRole;
-    } else {
+    } else if (!['MANAGER', 'SALES_EMPLOYEE'].includes(requestedRole)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
     }
 
     try {
-      assertSubscriptionActive(company);
+      assertSubscriptionActive(existingCompany);
     } catch (err) {
       return res.status(err.statusCode || 403).json({
         success: false,
@@ -110,7 +121,38 @@ export const register = asyncHandler(async (req, res) => {
         code: err.code,
       });
     }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { companyId_email: { companyId: existingCompany.id, email: emailLower } },
+    });
+
+    if (!existingUser) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your employee profile is not imported for this workspace. Contact your admin.',
+      });
+    }
+
+    return res.status(409).json({
+      success: false,
+      message: 'Email already registered. Please sign in.',
+    });
   }
+
+  if (!companyName) {
+    return res.status(400).json({
+      success: false,
+      message: 'Company / workspace name is required',
+    });
+  }
+
+  const selectedPlan = plan && getPlan(plan) ? plan : 'STARTER';
+  const company = await createCompany({
+    name: companyName,
+    plan: selectedPlan,
+    contactEmail: emailLower,
+    contactPhone: phone || null,
+  });
 
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
@@ -120,8 +162,8 @@ export const register = asyncHandler(async (req, res) => {
       email: emailLower,
       phone: phone || null,
       passwordHash,
-      role: userRole,
-      department: userRole === 'SUPER_ADMIN' ? 'Management' : 'Sales',
+      role: 'SUPER_ADMIN',
+      department: 'Management',
       status: 'ACTIVE',
     },
     include: { company: true },
@@ -156,18 +198,16 @@ export const register = asyncHandler(async (req, res) => {
 });
 
 export const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, companyName } = req.body;
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Email and password are required' });
   }
 
-  const user = await prisma.user.findFirst({
-    where: { email: email.toLowerCase(), status: 'ACTIVE' },
-    include: { company: true },
-  });
+  const emailLower = email.toLowerCase();
+  const { user, message } = await resolveLoginUser(emailLower, companyName);
 
   if (!user || !user.passwordHash) {
-    return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    return res.status(401).json({ success: false, message: message || 'Invalid email or password' });
   }
 
   const valid = await bcrypt.compare(password, user.passwordHash);

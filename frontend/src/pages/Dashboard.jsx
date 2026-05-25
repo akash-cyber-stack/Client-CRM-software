@@ -15,8 +15,9 @@ import {
   Line,
   Legend,
 } from 'recharts';
-import { reportsApi } from '../api';
+import { reportsApi, followUpsApi, employeesApi } from '../api';
 import { useAuth } from '../context/AuthContext';
+import EnterpriseAIAdvisor from '../components/EnterpriseAIAdvisor';
 import StatCard from '../components/StatCard';
 import EmployeePerformanceChart from '../components/EmployeePerformanceChart';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -40,7 +41,8 @@ function ChartCard({ title, subtitle, children, className = '' }) {
 }
 
 export default function Dashboard() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
+  const showEnterpriseAdvisor = isAdmin && user?.plan === 'ENTERPRISE';
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const chartTick = isDark ? '#94a3b8' : '#64748b';
@@ -53,16 +55,28 @@ export default function Dashboard() {
     fontSize: '13px',
   };
   const [data, setData] = useState(null);
+  const [followUps, setFollowUps] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    reportsApi
-      .dashboard()
-      .then((res) => setData(res.data.data))
+    const requests = [reportsApi.dashboard()];
+    if (showEnterpriseAdvisor) {
+      requests.push(followUpsApi.list(), employeesApi.list());
+    }
+
+    Promise.all(requests)
+      .then(([dashboardRes, followUpsRes, employeesRes]) => {
+        setData(dashboardRes.data.data);
+        if (showEnterpriseAdvisor) {
+          setFollowUps(followUpsRes?.data?.data || []);
+          setEmployees(employeesRes?.data?.data || []);
+        }
+      })
       .catch(() => setError('Could not load dashboard'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [showEnterpriseAdvisor]);
 
   if (loading) return <LoadingSpinner className="min-h-[50vh]" />;
   if (error) {
@@ -304,6 +318,10 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {showEnterpriseAdvisor && (
+        <EnterpriseAIAdvisor data={data} followUps={followUps} employees={employees} />
+      )}
 
       <div className="dashboard-actions mt-6 sm:mt-8 flex flex-col xs:flex-row flex-wrap gap-3">
         <Link to="/leads" className="btn-primary text-center flex-1 sm:flex-none min-h-[44px] flex items-center justify-center">
