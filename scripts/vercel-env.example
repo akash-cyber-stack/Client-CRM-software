@@ -1,7 +1,8 @@
 # Copy to scripts/vercel-env.local (gitignored) — paste your Neon + secrets, then run:
 #   powershell -File scripts/push-vercel-env.ps1
 
-DATABASE_URL=postgresql://USER:PASSWORD@ep-xxxx.region.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://USER:PASSWORD@ep-xxxx-pooler.region.aws.neon.tech/neondb?sslmode=require&pgbouncer=true
+DIRECT_URL=postgresql://USER:PASSWORD@ep-xxxx.region.aws.neon.tech/neondb?sslmode=require
 JWT_SECRET=change-this-to-a-long-random-string
 JWT_EXPIRES_IN=7d
 NODE_ENV=production

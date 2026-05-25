@@ -27,7 +27,8 @@ Add **all** of these in Vercel → Settings → Environment Variables (Productio
 
 | Key | Value |
 |-----|--------|
-| `DATABASE_URL` | Neon **Pooled** connection string (`?sslmode=require`) |
+| `DATABASE_URL` | Neon **Pooled** (`-pooler` host, `?sslmode=require&pgbouncer=true`) |
+| `DIRECT_URL` | Neon **Direct** (migrations only; optional on Vercel) |
 | `JWT_SECRET` | e.g. `crm-jwt-secret-change-this-2026` |
 | `JWT_EXPIRES_IN` | `7d` |
 | `NODE_ENV` | `production` |
