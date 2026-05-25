@@ -19,7 +19,7 @@ const userSelect = {
 
 export const listEmployees = asyncHandler(async (req, res) => {
   const { status, role, search } = req.query;
-  const where = {};
+  const where = { companyId: req.companyId };
   if (status) where.status = status;
   if (role) where.role = role;
   if (search) {
@@ -47,12 +47,15 @@ export const createEmployee = asyncHandler(async (req, res) => {
     });
   }
 
-  const exists = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  const exists = await prisma.user.findUnique({
+    where: { companyId_email: { companyId: req.companyId, email: email.toLowerCase() } },
+  });
   if (exists) return res.status(409).json({ success: false, message: 'Email already exists' });
 
   const passwordHash = await bcrypt.hash(password || 'Password@123', 10);
   const employee = await prisma.user.create({
     data: {
+      companyId: req.companyId,
       name,
       email: email.toLowerCase(),
       phone,
@@ -79,6 +82,9 @@ export const updateEmployee = asyncHandler(async (req, res) => {
     });
   }
 
+  const existing = await prisma.user.findFirst({ where: { id, companyId: req.companyId } });
+  if (!existing) return res.status(404).json({ success: false, message: 'Employee not found' });
+
   const data = { name, phone, role, department, ivrAgentId, ivrExtension, status };
   if (email) data.email = email.toLowerCase();
   if (password) data.passwordHash = await bcrypt.hash(password, 10);
@@ -96,6 +102,8 @@ export const deleteEmployee = asyncHandler(async (req, res) => {
   if (id === req.user.id) {
     return res.status(400).json({ success: false, message: 'Cannot delete your own account' });
   }
+  const existing = await prisma.user.findFirst({ where: { id, companyId: req.companyId } });
+  if (!existing) return res.status(404).json({ success: false, message: 'Employee not found' });
   await prisma.user.delete({ where: { id } });
   res.json({ success: true, message: 'Employee deleted' });
 });

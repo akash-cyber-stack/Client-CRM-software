@@ -7,7 +7,10 @@ import { processIvrCallCompleted } from './ivrService.js';
  * When ivr_api_url is not set, runs demo mode and saves call + recording via webhook logic.
  */
 export async function initiateOutboundCall({ employeeId, leadId, customerPhone }) {
-  const employee = await prisma.user.findUnique({ where: { id: employeeId } });
+  const employee = await prisma.user.findUnique({
+    where: { id: employeeId },
+    include: { company: { select: { id: true, gstin: true } } },
+  });
   if (!employee) {
     throw Object.assign(new Error('Employee not found'), { statusCode: 404 });
   }
@@ -18,9 +21,9 @@ export async function initiateOutboundCall({ employeeId, leadId, customerPhone }
     );
   }
 
-  const ivrApiUrl = (await getSetting('ivr_api_url'))?.replace(/\/$/, '');
-  const ivrApiKey = await getSetting('ivr_api_key');
-  const apiBase = (await getSetting('api_base_url')) || 'http://localhost:5000';
+  const ivrApiUrl = (await getSetting(employee.companyId, 'ivr_api_url'))?.replace(/\/$/, '');
+  const ivrApiKey = await getSetting(employee.companyId, 'ivr_api_key');
+  const apiBase = (await getSetting(employee.companyId, 'api_base_url')) || 'http://localhost:5000';
 
   const payload = {
     agent_id: employee.ivrAgentId,
@@ -28,7 +31,7 @@ export async function initiateOutboundCall({ employeeId, leadId, customerPhone }
     customer_phone: customerPhone,
     lead_id: leadId,
     employee_id: employeeId,
-    callback_url: `${apiBase}/api/webhooks/ivr-call-completed`,
+    callback_url: `${apiBase}/api/webhooks/ivr-call-completed?gstin=${encodeURIComponent(employee.company?.gstin || '')}`,
   };
 
   if (ivrApiUrl && ivrApiKey) {
@@ -66,7 +69,7 @@ export async function initiateOutboundCall({ employeeId, leadId, customerPhone }
     call_duration: 8,
     recording_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     notes: 'Demo IVR call — set ivr_api_url in Settings for live IVR',
-  });
+  }, employee.companyId);
 
   return { mode: 'demo', message: 'Demo call completed. Recording saved.', data: callLog };
 }

@@ -6,15 +6,15 @@ import { createNotification } from '../services/notificationService.js';
 import { env } from '../config/env.js';
 import { getSetting } from '../services/settingsService.js';
 
-async function logWebhook(provider, payload, status, message) {
+async function logWebhook(companyId, provider, payload, status, message) {
   await prisma.webhookLog.create({
-    data: { provider, payload, status, message },
+    data: { companyId, provider, payload, status, message },
   });
 }
 
 export const googleLeads = asyncHandler(async (req, res) => {
   const payload = req.body;
-  await logWebhook('GOOGLE_ADS', payload, 'RECEIVED', null);
+  await logWebhook(req.companyId, 'GOOGLE_ADS', payload, 'RECEIVED', null);
 
   try {
     const {
@@ -35,6 +35,7 @@ export const googleLeads = asyncHandler(async (req, res) => {
     } = payload;
 
     const result = await upsertLeadFromWebhook({
+      companyId: req.companyId,
       customerName: full_name || customer_name || name || 'Google Lead',
       phone: phone_number || phone,
       email,
@@ -57,7 +58,7 @@ export const googleLeads = asyncHandler(async (req, res) => {
       });
     }
 
-    await logWebhook('GOOGLE_ADS', payload, 'SUCCESS', result.isDuplicate ? 'DUPLICATE' : 'CREATED');
+    await logWebhook(req.companyId, 'GOOGLE_ADS', payload, 'SUCCESS', result.isDuplicate ? 'DUPLICATE' : 'CREATED');
     res.status(result.isDuplicate ? 200 : 201).json({
       success: true,
       message: result.isDuplicate ? 'Duplicate lead - activity logged' : 'Lead created',
@@ -65,7 +66,7 @@ export const googleLeads = asyncHandler(async (req, res) => {
       isDuplicate: result.isDuplicate,
     });
   } catch (err) {
-    await logWebhook('GOOGLE_ADS', payload, 'ERROR', err.message);
+    await logWebhook(req.companyId, 'GOOGLE_ADS', payload, 'ERROR', err.message);
     throw err;
   }
 });
@@ -76,7 +77,8 @@ export const metaLeads = asyncHandler(async (req, res) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
-    const verifyToken = (await getSetting('meta_webhook_token')) || env.metaWebhookVerifyToken;
+    const verifyToken =
+      (await getSetting(req.companyId, 'meta_webhook_token')) || env.metaWebhookVerifyToken;
     if (mode === 'subscribe' && token === verifyToken) {
       return res.status(200).send(challenge);
     }
@@ -84,7 +86,7 @@ export const metaLeads = asyncHandler(async (req, res) => {
   }
 
   const payload = req.body;
-  await logWebhook('META_ADS', payload, 'RECEIVED', null);
+  await logWebhook(req.companyId, 'META_ADS', payload, 'RECEIVED', null);
 
   try {
     const entry = payload.entry?.[0];
@@ -98,6 +100,7 @@ export const metaLeads = asyncHandler(async (req, res) => {
     };
 
     const result = await upsertLeadFromWebhook({
+      companyId: req.companyId,
       customerName: getField('full_name') || getField('first_name') || payload.customer_name || 'Meta Lead',
       phone: getField('phone_number') || getField('phone') || payload.phone,
       email: getField('email') || payload.email,
@@ -120,7 +123,7 @@ export const metaLeads = asyncHandler(async (req, res) => {
       });
     }
 
-    await logWebhook('META_ADS', payload, 'SUCCESS', result.isDuplicate ? 'DUPLICATE' : 'CREATED');
+    await logWebhook(req.companyId, 'META_ADS', payload, 'SUCCESS', result.isDuplicate ? 'DUPLICATE' : 'CREATED');
     res.status(result.isDuplicate ? 200 : 201).json({
       success: true,
       message: result.isDuplicate ? 'Duplicate lead - activity logged' : 'Lead created',
@@ -128,25 +131,25 @@ export const metaLeads = asyncHandler(async (req, res) => {
       isDuplicate: result.isDuplicate,
     });
   } catch (err) {
-    await logWebhook('META_ADS', payload, 'ERROR', err.message);
+    await logWebhook(req.companyId, 'META_ADS', payload, 'ERROR', err.message);
     throw err;
   }
 });
 
 export const ivrCallCompleted = asyncHandler(async (req, res) => {
   const payload = req.body;
-  await logWebhook('IVR', payload, 'RECEIVED', null);
+  await logWebhook(req.companyId, 'IVR', payload, 'RECEIVED', null);
 
   try {
-    const callLog = await processIvrCallCompleted(payload);
-    await logWebhook('IVR', payload, 'SUCCESS', callLog.id);
+    const callLog = await processIvrCallCompleted(payload, req.companyId);
+    await logWebhook(req.companyId, 'IVR', payload, 'SUCCESS', callLog.id);
     res.status(201).json({
       success: true,
       message: 'Call log saved',
       data: callLog,
     });
   } catch (err) {
-    await logWebhook('IVR', payload, 'ERROR', err.message);
+    await logWebhook(req.companyId, 'IVR', payload, 'ERROR', err.message);
     throw err;
   }
 });

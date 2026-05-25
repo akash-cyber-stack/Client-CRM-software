@@ -1,13 +1,13 @@
 import axios from 'axios';
 
-/** Local dev → port 5000. Live site → same-origin /api (Vercel rewrite). */
+/**
+ * Local: Vite proxy `/api` → localhost:5000 (avoids CORS / connection issues).
+ * Production: same-origin `/api` (Vercel rewrite).
+ */
 export function resolveApiUrl() {
-  if (typeof window !== 'undefined') {
-    const { hostname } = window.location;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:5000/api';
-    }
-    return '/api';
+  const fromEnv = import.meta.env.VITE_API_URL?.trim();
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, '');
   }
   return '/api';
 }

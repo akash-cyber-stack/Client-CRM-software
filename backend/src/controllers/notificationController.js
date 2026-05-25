@@ -21,7 +21,7 @@ export const listNotifications = asyncHandler(async (req, res) => {
 
 export const poll = asyncHandler(async (req, res) => {
   const since = req.query.since;
-  const result = await pollNotifications(req.user.id, req.user.role, { since });
+  const result = await pollNotifications(req.user.id, req.user.role, req.companyId, { since });
   const enriched = result.notifications.map((n) => ({
     ...n,
     path: resolveNotificationPath(n),

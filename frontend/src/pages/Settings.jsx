@@ -8,6 +8,8 @@ import {
   requestDesktopPermission,
 } from '../utils/notificationPrefs';
 import { playNotificationSound } from '../utils/notificationSound';
+import SubscriptionCard from '../components/settings/SubscriptionCard';
+import AccountProfileCard from '../components/settings/AccountProfileCard';
 
 const FIELDS = [
   { key: 'google_webhook_secret', label: 'Google Ads Webhook Secret', hint: 'Header: x-webhook-secret' },
@@ -45,12 +47,16 @@ export default function Settings() {
   );
 
   const load = () => {
-    settingsApi.get().then((res) => {
-      const d = res.data.data;
-      setSuperAdmin(d.superAdmin || null);
-      const { superAdmin: _a, hasSuperAdmin: _b, ...rest } = d;
-      setSettings(rest);
-    }).finally(() => setLoading(false));
+    settingsApi
+      .get()
+      .then((res) => {
+        const d = res.data.data;
+        setSuperAdmin(d.superAdmin || null);
+        const { superAdmin: _a, hasSuperAdmin: _b, ...rest } = d;
+        setSettings(rest);
+      })
+      .catch(() => setMessage('Could not load settings'))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -102,11 +108,16 @@ export default function Settings() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="page-enter">
-      <h1 className="text-2xl font-bold text-main mb-8 tracking-tight">Settings</h1>
+    <div className="page-enter settings-page w-full max-w-5xl mx-auto">
+      <h1 className="text-xl sm:text-2xl font-bold text-main mb-6 sm:mb-8 tracking-tight">Settings</h1>
+
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 mb-6 sm:mb-8">
+        <SubscriptionCard />
+        <AccountProfileCard />
+      </div>
 
       {isSuperAdmin && (
-        <div className="card max-w-2xl mb-8 border-2 border-primary-500/30">
+        <div className="card w-full mb-6 sm:mb-8 border-2 border-primary-500/30">
           <h2 className="text-lg font-semibold text-primary-500 mb-1">Super Admin</h2>
           <p className="text-sm text-muted mb-4">
             Only one Super Admin is allowed. Adding a new one will change the current Super Admin to Manager.
@@ -171,7 +182,7 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="card max-w-2xl mb-8 border border-primary-500/20">
+      <div className="card w-full mb-6 sm:mb-8 border border-primary-500/20">
         <h2 className="text-lg font-semibold text-main mb-1">🔔 Notifications & alerts</h2>
         <p className="text-sm text-muted mb-6">
           Ring sound + on-screen toast + desktop/mobile browser notifications. Click any alert to open the related lead or page.
@@ -239,7 +250,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="card max-w-2xl space-y-5 mb-8">
+      <form onSubmit={handleSave} className="card w-full space-y-5 mb-6 sm:mb-8">
         <h2 className="font-semibold text-main">⚡ Smart automation</h2>
         <p className="text-sm text-muted -mt-3">Less manual work — CRM creates alerts & actions automatically (modern AI-era CRM style).</p>
 
@@ -277,7 +288,7 @@ export default function Settings() {
         </button>
       </form>
 
-      <form onSubmit={handleSave} className="card max-w-2xl space-y-5">
+      <form onSubmit={handleSave} className="card w-full space-y-5">
         <h2 className="font-semibold text-main">Integrations</h2>
         {message && (
           <div className={message.includes('success') ? 'alert-success' : 'alert-error'}>
@@ -307,9 +318,9 @@ export default function Settings() {
         <div className="border-t pt-4">
           <h3 className="font-semibold mb-2">Webhook Endpoints</h3>
           <div className="text-sm text-muted space-y-1 font-mono p-3 rounded-xl border border-default" style={{ backgroundColor: 'var(--surface-hover)' }}>
-            <p>POST /api/webhooks/google-leads</p>
-            <p>POST /api/webhooks/meta-leads</p>
-            <p>POST /api/webhooks/ivr-call-completed</p>
+            <p>POST /api/webhooks/google-leads?companyId=YOUR_ID</p>
+            <p>POST /api/webhooks/meta-leads?companyId=YOUR_ID</p>
+            <p>POST /api/webhooks/ivr-call-completed?companyId=YOUR_ID</p>
           </div>
         </div>
 

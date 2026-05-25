@@ -3,105 +3,280 @@ import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 import { env } from '../config/env.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { hasSuperAdmin } from '../services/superAdminService.js';
+import {
+  createCompany,
+  getDefaultCompany,
+  hasSuperAdminGlobally,
+  hasSuperAdminInCompany,
+  assertSubscriptionActive,
+} from '../services/companyService.js';
+import { signPaymentToken } from '../services/billingService.js';
+import { getPlan } from '../constants/plans.js';
+import { toSafeUser, userSelectWithCompany } from '../utils/tenant.js';
+import {
+  getOAuthStartUrl,
+  handleOAuthCallback,
+  listOAuthProviders,
+  oauthErrorRedirect,
+  oauthSuccessRedirect,
+} from '../services/oauthService.js';
 
-export const setupStatus = asyncHandler(async (req, res) => {
-  const superAdminExists = await hasSuperAdmin();
+function issueToken(user) {
+  return jwt.sign(
+    { userId: user.id, role: user.role, companyId: user.companyId },
+    env.jwtSecret,
+    { expiresIn: env.jwtExpiresIn }
+  );
+}
+
+export const setupStatus = asyncHandler(async (_req, res) => {
+  const hasSuperAdmin = await hasSuperAdminGlobally();
   res.json({
     success: true,
     data: {
-      hasSuperAdmin: superAdminExists,
-      canRegisterSuperAdmin: !superAdminExists,
+      hasSuperAdmin,
+      hasCompanies: hasSuperAdmin,
+      canRegisterSuperAdmin: !hasSuperAdmin,
+      oauthProviders: listOAuthProviders(),
     },
   });
 });
 
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, phone, password, role } = req.body;
+  const { name, email, phone, password, role, companyName, plan } = req.body;
 
   if (!name || !email || !password) {
-    return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
+    return res.status(400).json({
+      success: false,
+      message: 'Name, email, and password are required',
+    });
   }
 
   if (password.length < 6) {
     return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
   }
 
-  const requestedRole = role || 'SALES_EMPLOYEE';
-  const superAdminExists = await hasSuperAdmin();
-
-  if (requestedRole === 'SUPER_ADMIN') {
-    if (superAdminExists) {
-      return res.status(409).json({
-        success: false,
-        message: 'Super Admin already exists. Only one Super Admin is allowed. Register as Manager or Sales Employee.',
-      });
-    }
-  } else if (!['MANAGER', 'SALES_EMPLOYEE'].includes(requestedRole)) {
-    return res.status(400).json({ success: false, message: 'Invalid role for registration' });
+  const emailLower = email.toLowerCase();
+  const existingEmail = await prisma.user.findFirst({ where: { email: emailLower } });
+  if (existingEmail) {
+    return res.status(409).json({ success: false, message: 'Email already registered. Please sign in.' });
   }
 
-  const exists = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (exists) {
-    return res.status(409).json({ success: false, message: 'Email already registered. Please sign in.' });
+  const canCreateWorkspace = !(await hasSuperAdminGlobally());
+  let company;
+  let userRole = 'SALES_EMPLOYEE';
+
+  if (canCreateWorkspace) {
+    if (!companyName) {
+      return res.status(400).json({ success: false, message: 'Company / workspace name is required' });
+    }
+    const selectedPlan = plan && getPlan(plan) ? plan : 'STARTER';
+    company = await createCompany({
+      name: companyName,
+      plan: selectedPlan,
+      contactEmail: emailLower,
+      contactPhone: phone || null,
+    });
+    userRole = 'SUPER_ADMIN';
+  } else {
+    company = await getDefaultCompany();
+    if (!company) {
+      return res.status(400).json({ success: false, message: 'No workspace available. Contact your admin.' });
+    }
+
+    const requestedRole = role || 'SALES_EMPLOYEE';
+    const superAdminExists = await hasSuperAdminInCompany(company.id);
+
+    if (requestedRole === 'SUPER_ADMIN') {
+      if (superAdminExists) {
+        return res.status(409).json({
+          success: false,
+          message: 'Super Admin already exists. Register as Manager or Sales Employee.',
+        });
+      }
+      userRole = 'SUPER_ADMIN';
+    } else if (['MANAGER', 'SALES_EMPLOYEE'].includes(requestedRole)) {
+      userRole = requestedRole;
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid role' });
+    }
+
+    try {
+      assertSubscriptionActive(company);
+    } catch (err) {
+      return res.status(err.statusCode || 403).json({
+        success: false,
+        message: err.message,
+        code: err.code,
+      });
+    }
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: {
+      companyId: company.id,
       name,
-      email: email.toLowerCase(),
+      email: emailLower,
       phone: phone || null,
       passwordHash,
-      role: requestedRole === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : requestedRole,
-      department: requestedRole === 'SUPER_ADMIN' ? 'Management' : 'Sales',
+      role: userRole,
+      department: userRole === 'SUPER_ADMIN' ? 'Management' : 'Sales',
       status: 'ACTIVE',
     },
+    include: { company: true },
   });
 
-  const token = jwt.sign({ userId: user.id, role: user.role }, env.jwtSecret, {
-    expiresIn: env.jwtExpiresIn,
-  });
+  if (company.subscriptionStatus !== 'ACTIVE') {
+    const paymentToken = signPaymentToken({
+      companyId: company.id,
+      email: emailLower,
+      plan: company.plan,
+    });
+    return res.status(201).json({
+      success: true,
+      message: 'Account created. Complete payment to start using the CRM.',
+      data: {
+        needsPayment: true,
+        paymentToken,
+        plan: company.plan,
+        planDetails: getPlan(company.plan),
+        companyId: company.id,
+        user: toSafeUser(user),
+      },
+    });
+  }
 
-  const { passwordHash: _, ...safeUser } = user;
+  const token = issueToken(user);
   res.status(201).json({
     success: true,
-    message:
-      user.role === 'SUPER_ADMIN'
-        ? 'Super Admin account created successfully'
-        : 'Registration successful',
-    data: { token, user: safeUser },
+    message: 'Registration successful',
+    data: { token, user: toSafeUser(user) },
   });
 });
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Email and password required' });
+    return res.status(400).json({ success: false, message: 'Email and password are required' });
   }
 
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user || user.status !== 'ACTIVE') {
-    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  const user = await prisma.user.findFirst({
+    where: { email: email.toLowerCase(), status: 'ACTIVE' },
+    include: { company: true },
+  });
+
+  if (!user || !user.passwordHash) {
+    return res.status(401).json({ success: false, message: 'Invalid email or password' });
   }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
-    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    return res.status(401).json({ success: false, message: 'Invalid email or password' });
   }
 
-  const token = jwt.sign({ userId: user.id, role: user.role }, env.jwtSecret, {
-    expiresIn: env.jwtExpiresIn,
-  });
+  if (user.company.subscriptionStatus !== 'ACTIVE') {
+    const paymentToken = signPaymentToken({
+      companyId: user.companyId,
+      email: user.email,
+      plan: user.company.plan,
+    });
+    return res.status(403).json({
+      success: false,
+      message: 'Please complete your plan payment to access the CRM',
+      code: 'PAYMENT_REQUIRED',
+      data: {
+        needsPayment: true,
+        paymentToken,
+        plan: user.company.plan,
+        planDetails: getPlan(user.company.plan),
+        companyId: user.companyId,
+      },
+    });
+  }
 
-  const { passwordHash, ...safeUser } = user;
-  res.json({ success: true, data: { token, user: safeUser } });
+  if (user.company.status !== 'ACTIVE') {
+    return res.status(403).json({ success: false, message: 'Company account is suspended' });
+  }
+
+  const token = issueToken(user);
+  res.json({ success: true, data: { token, user: toSafeUser(user) } });
 });
 
 export const me = asyncHandler(async (req, res) => {
-  res.json({ success: true, data: req.user });
+  res.json({ success: true, data: toSafeUser(req.user) });
+});
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const { name, phone, currentPassword, newPassword } = req.body;
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  const data = {};
+  if (name != null && String(name).trim()) data.name = String(name).trim();
+  if (phone !== undefined) data.phone = phone || null;
+
+  if (newPassword) {
+    if (!user.passwordHash) {
+      return res.status(400).json({
+        success: false,
+        message: 'Social login accounts cannot set password here',
+      });
+    }
+    if (!currentPassword) {
+      return res.status(400).json({ success: false, message: 'Current password is required' });
+    }
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+    data.passwordHash = await bcrypt.hash(newPassword, 10);
+  }
+
+  if (!Object.keys(data).length) {
+    return res.status(400).json({ success: false, message: 'No changes provided' });
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data,
+    select: userSelectWithCompany(),
+  });
+
+  res.json({ success: true, message: 'Profile updated', data: toSafeUser(updated) });
 });
 
 export const logout = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Logged out successfully' });
+});
+
+export const oauthProviders = asyncHandler(async (_req, res) => {
+  res.json({ success: true, data: listOAuthProviders() });
+});
+
+export const oauthStart = asyncHandler(async (req, res) => {
+  const { provider } = req.params;
+  const url = getOAuthStartUrl(req, provider);
+  res.redirect(url);
+});
+
+export const oauthCallback = asyncHandler(async (req, res) => {
+  const { provider } = req.params;
+  const { code, state, error } = req.query;
+
+  if (error) {
+    return res.redirect(oauthErrorRedirect(String(error)));
+  }
+
+  try {
+    const { token } = await handleOAuthCallback(req, provider, { code, state });
+    return res.redirect(oauthSuccessRedirect(token));
+  } catch (err) {
+    return res.redirect(oauthErrorRedirect(err.message || 'OAuth login failed'));
+  }
 });

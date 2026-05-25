@@ -4,14 +4,13 @@ import { createNotificationIfNew } from './notificationService.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-async function isEnabled(key) {
-  const v = await getSetting(key);
-  return v !== 'false' && v !== '0';
-}
-
-/** Smart CRM automations — reduces manual follow-up work */
-export async function runAutomationsForUser(userId, role) {
+export async function runAutomationsForUser(userId, role, companyId) {
   const created = [];
+
+  const isEnabled = async (key) => {
+    const v = await getSetting(companyId, key);
+    return v !== 'false' && v !== '0';
+  };
 
   if (await isEnabled('automation_missed_followup')) {
     const missed = await prisma.followUp.findMany({
@@ -19,6 +18,7 @@ export async function runAutomationsForUser(userId, role) {
         employeeId: userId,
         isCompleted: false,
         scheduledAt: { lt: new Date() },
+        lead: { companyId },
       },
       include: { lead: { select: { id: true, customerName: true } } },
       take: 20,
@@ -45,6 +45,7 @@ export async function runAutomationsForUser(userId, role) {
         employeeId: userId,
         isCompleted: false,
         scheduledAt: { gte: now, lte: in2h },
+        lead: { companyId },
       },
       include: { lead: { select: { id: true, customerName: true } } },
     });
@@ -63,11 +64,12 @@ export async function runAutomationsForUser(userId, role) {
   }
 
   if (await isEnabled('automation_stale_lead_enabled')) {
-    const days = parseInt((await getSetting('automation_stale_lead_days')) || '3', 10);
+    const days = parseInt((await getSetting(companyId, 'automation_stale_lead_days')) || '3', 10);
     const cutoff = new Date(Date.now() - days * DAY_MS);
 
     const staleLeads = await prisma.lead.findMany({
       where: {
+        companyId,
         assignedToId: userId,
         status: { in: ['NEW', 'ASSIGNED'] },
         updatedAt: { lt: cutoff },
@@ -89,10 +91,11 @@ export async function runAutomationsForUser(userId, role) {
     }
   }
 
-  // Managers/admins: notify when new unassigned leads exist (round-robin off)
   if (role === 'MANAGER' || role === 'SUPER_ADMIN') {
     if (await isEnabled('automation_unassigned_lead_alert')) {
-      const unassigned = await prisma.lead.count({ where: { assignedToId: null, status: 'NEW' } });
+      const unassigned = await prisma.lead.count({
+        where: { companyId, assignedToId: null, status: 'NEW' },
+      });
       if (unassigned > 0) {
         const n = await createNotificationIfNew({
           userId,

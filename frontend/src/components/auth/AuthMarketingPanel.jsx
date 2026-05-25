@@ -27,7 +27,7 @@ export default function AuthMarketingPanel({ onGetStarted }) {
 
       <div className="auth-brand-inner">
         <header className="auth-brand-header">
-          <span className="auth-brand-tag">Sales operations</span>
+          <span className="auth-brand-tag">Sales CRM · Plans from ₹999/mo</span>
         </header>
 
         <div className="auth-brand-main">

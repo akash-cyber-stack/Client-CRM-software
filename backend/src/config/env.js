@@ -59,9 +59,43 @@ export const env = {
   jwtSecret: cleanEnv(process.env.JWT_SECRET, 'dev-secret-change-me'),
   jwtExpiresIn: parseJwtExpiresIn(process.env.JWT_EXPIRES_IN),
   frontendUrl: cleanEnv(process.env.FRONTEND_URL, 'http://localhost:5173'),
+  apiBaseUrl: cleanEnv(process.env.API_BASE_URL, ''),
   corsOrigins: buildCorsOrigins(),
   googleWebhookSecret: process.env.GOOGLE_WEBHOOK_SECRET || '',
   metaWebhookVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN || '',
   metaWebhookSecret: process.env.META_WEBHOOK_SECRET || '',
   ivrWebhookSecret: process.env.IVR_WEBHOOK_SECRET || '',
+  gstVerificationMode: cleanEnv(process.env.GST_VERIFICATION_MODE, 'mock').toLowerCase(),
+  gstApiKey: cleanEnv(process.env.GST_API_KEY, ''),
+  gstApiUrl: cleanEnv(process.env.GST_API_URL, ''),
+  gstMockMobile: cleanEnv(process.env.GST_MOCK_MOBILE, '9876543210'),
+  gstMockEmail: cleanEnv(process.env.GST_MOCK_EMAIL, ''),
+  gstOtpRequired: cleanEnv(process.env.GST_OTP_REQUIRED, 'true').toLowerCase() !== 'false',
+  gstOtpExpiryMinutes: parseInt(cleanEnv(process.env.GST_OTP_EXPIRY_MINUTES, '10'), 10) || 10,
+  gstOtpDevExpose: cleanEnv(process.env.GST_OTP_DEV_EXPOSE, 'true').toLowerCase() === 'true' &&
+    cleanEnv(process.env.NODE_ENV, 'development') !== 'production',
+  smsHttpUrl: cleanEnv(process.env.SMS_HTTP_URL, ''),
+  smsApiKey: cleanEnv(process.env.SMS_API_KEY, ''),
+  fast2smsApiKey: cleanEnv(process.env.FAST2SMS_API_KEY, ''),
+  smtpHttpUrl: cleanEnv(process.env.SMTP_HTTP_URL, ''),
+  smtpApiKey: cleanEnv(process.env.SMTP_API_KEY, ''),
+  smtpHost: cleanEnv(process.env.SMTP_HOST, 'smtp.gmail.com'),
+  smtpPort: parseInt(cleanEnv(process.env.SMTP_PORT, '587'), 10) || 587,
+  smtpUser: cleanEnv(process.env.SMTP_USER, ''),
+  smtpPass: cleanEnv(process.env.SMTP_PASS, ''),
+  smtpFrom: cleanEnv(process.env.SMTP_FROM, ''),
+  googleClientId: cleanEnv(process.env.GOOGLE_CLIENT_ID, ''),
+  googleClientSecret: cleanEnv(process.env.GOOGLE_CLIENT_SECRET, ''),
+  microsoftClientId: cleanEnv(process.env.MICROSOFT_CLIENT_ID, ''),
+  microsoftClientSecret: cleanEnv(process.env.MICROSOFT_CLIENT_SECRET, ''),
+  microsoftTenantId: cleanEnv(process.env.MICROSOFT_TENANT_ID, 'common'),
+  githubClientId: cleanEnv(process.env.GITHUB_CLIENT_ID, ''),
+  githubClientSecret: cleanEnv(process.env.GITHUB_CLIENT_SECRET, ''),
 };
+
+export function apiPublicUrl(req) {
+  if (env.apiBaseUrl) return env.apiBaseUrl.replace(/\/$/, '');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  return `${proto}://${host}`;
+}

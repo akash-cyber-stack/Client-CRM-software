@@ -19,6 +19,23 @@ enum EmployeeStatus {
   INACTIVE
 }
 
+enum CompanyStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SubscriptionPlan {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+}
+
 enum LeadSource {
   GOOGLE_ADS
   META_ADS
@@ -73,10 +90,38 @@ enum ActivityType {
   CAMPAIGN_UPDATE
 }
 
+model Company {
+  id                 String             @id @default(uuid())
+  name               String
+  gstin              String             @unique
+  contactPhone       String?            @map("contact_phone")
+  contactEmail       String?            @map("contact_email")
+  plan               SubscriptionPlan   @default(STARTER)
+  subscriptionStatus SubscriptionStatus @default(PENDING) @map("subscription_status")
+  paidAt             DateTime?          @map("paid_at")
+  paymentId          String?            @map("payment_id")
+  status             CompanyStatus      @default(ACTIVE)
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  users               User[]
+  leads               Lead[]
+  campaigns           Campaign[]
+  callLogs            CallLog[]
+  settings            Setting[]
+  leadAssignmentState LeadAssignmentState?
+  webhookLogs         WebhookLog[]
+
+  @@map("companies")
+}
+
 model User {
   id            String         @id @default(uuid())
-  email         String         @unique
-  passwordHash  String         @map("password_hash")
+  companyId     String         @map("company_id")
+  email         String
+  passwordHash  String?        @map("password_hash")
+  oauthProvider String?        @map("oauth_provider")
+  oauthSubject  String?        @map("oauth_subject")
   name          String
   phone         String?
   role          UserRole       @default(SALES_EMPLOYEE)
@@ -87,18 +132,23 @@ model User {
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   assignedLeads Lead[]         @relation("AssignedEmployee")
   callLogs      CallLog[]
   followUps     FollowUp[]
   notes         Note[]
   notifications Notification[]
 
+  @@unique([companyId, email])
+  @@unique([companyId, oauthProvider, oauthSubject])
+  @@index([companyId])
   @@map("users")
 }
 
 model Lead {
   id               String     @id @default(uuid())
-  leadNumber       Int        @unique @default(autoincrement()) @map("lead_number")
+  companyId        String     @map("company_id")
+  leadNumber       Int        @default(autoincrement()) @map("lead_number")
   customerName     String     @map("customer_name")
   phone            String
   email            String?
@@ -116,6 +166,7 @@ model Lead {
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")
 
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   assignedTo   User?          @relation("AssignedEmployee", fields: [assignedToId], references: [id])
   callLogs     CallLog[]
   followUps    FollowUp[]
@@ -124,64 +175,69 @@ model Lead {
   campaign     Campaign?      @relation(fields: [campaignId], references: [id])
   campaignId   String?        @map("campaign_id")
 
-  @@index([phone])
-  @@index([email])
-  @@index([status])
-  @@index([source])
-  @@index([assignedToId])
+  @@unique([companyId, leadNumber])
+  @@index([companyId, phone])
+  @@index([companyId, email])
+  @@index([companyId, status])
+  @@index([companyId, source])
+  @@index([companyId, assignedToId])
   @@map("leads")
 }
 
 model Campaign {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
+  companyId String     @map("company_id")
   name      String
   source    LeadSource
-  adSetName String?  @map("ad_set_name")
-  adName    String?  @map("ad_name")
-  formName  String?  @map("form_name")
-  createdAt DateTime @default(now()) @map("created_at")
+  adSetName String?    @map("ad_set_name")
+  adName    String?    @map("ad_name")
+  formName  String?    @map("form_name")
+  createdAt DateTime   @default(now()) @map("created_at")
 
-  leads Lead[]
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads   Lead[]
 
-  @@unique([name, source])
+  @@unique([companyId, name, source])
   @@map("campaigns")
 }
 
 model CallLog {
-  id              String     @id @default(uuid())
-  leadId          String?    @map("lead_id")
-  employeeId      String?    @map("employee_id")
-  customerPhone   String     @map("customer_phone")
-  ivrAgentId      String?    @map("ivr_agent_id")
-  callType        CallType   @map("call_type")
-  callStatus      CallStatus @map("call_status")
-  callStartTime   DateTime   @map("call_start_time")
-  callEndTime     DateTime?  @map("call_end_time")
-  durationSeconds Int        @default(0) @map("duration_seconds")
-  recordingUrl    String?    @map("recording_url")
-  ivrProviderCallId String?  @map("ivr_provider_call_id")
-  notes           String?
-  isLinked        Boolean    @default(true) @map("is_linked")
-  createdAt       DateTime   @default(now()) @map("created_at")
+  id                String     @id @default(uuid())
+  companyId         String     @map("company_id")
+  leadId            String?    @map("lead_id")
+  employeeId        String?    @map("employee_id")
+  customerPhone     String     @map("customer_phone")
+  ivrAgentId        String?    @map("ivr_agent_id")
+  callType          CallType   @map("call_type")
+  callStatus        CallStatus @map("call_status")
+  callStartTime     DateTime   @map("call_start_time")
+  callEndTime       DateTime?  @map("call_end_time")
+  durationSeconds   Int        @default(0) @map("duration_seconds")
+  recordingUrl      String?    @map("recording_url")
+  ivrProviderCallId String?    @map("ivr_provider_call_id")
+  notes             String?
+  isLinked          Boolean    @default(true) @map("is_linked")
+  createdAt         DateTime   @default(now()) @map("created_at")
 
-  lead     Lead? @relation(fields: [leadId], references: [id])
-  employee User? @relation(fields: [employeeId], references: [id])
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead     Lead?   @relation(fields: [leadId], references: [id])
+  employee User?   @relation(fields: [employeeId], references: [id])
 
-  @@index([customerPhone])
-  @@index([employeeId])
-  @@index([leadId])
+  @@index([companyId, customerPhone])
+  @@index([companyId, employeeId])
+  @@index([companyId, leadId])
   @@map("call_logs")
 }
 
 model FollowUp {
-  id          String   @id @default(uuid())
-  leadId      String   @map("lead_id")
-  employeeId  String   @map("employee_id")
-  scheduledAt DateTime @map("scheduled_at")
+  id          String    @id @default(uuid())
+  leadId      String    @map("lead_id")
+  employeeId  String    @map("employee_id")
+  scheduledAt DateTime  @map("scheduled_at")
   remarks     String?
-  isCompleted Boolean  @default(false) @map("is_completed")
+  isCompleted Boolean   @default(false) @map("is_completed")
   completedAt DateTime? @map("completed_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
 
   lead     Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   employee User @relation(fields: [employeeId], references: [id])
@@ -192,11 +248,11 @@ model FollowUp {
 }
 
 model Note {
-  id         String   @id @default(uuid())
-  leadId     String   @map("lead_id")
-  authorId   String   @map("author_id")
-  content    String
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  leadId    String   @map("lead_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
 
   lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   author User @relation(fields: [authorId], references: [id])
@@ -237,28 +293,36 @@ model LeadActivity {
 
 model WebhookLog {
   id        String   @id @default(uuid())
+  companyId String?  @map("company_id")
   provider  String
   payload   Json
   status    String
   message   String?
   createdAt DateTime @default(now()) @map("created_at")
 
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@map("webhook_logs")
 }
 
 model Setting {
   id        String   @id @default(uuid())
-  key       String   @unique
+  companyId String   @map("company_id")
+  key       String
   value     String
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, key])
   @@map("settings")
 }
 
-// Tracks round-robin pointer
 model LeadAssignmentState {
-  id              String @id @default("default")
-  lastEmployeeId  String? @map("last_employee_id")
+  companyId        String  @id @map("company_id")
+  lastEmployeeId   String? @map("last_employee_id")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("lead_assignment_state")
 }

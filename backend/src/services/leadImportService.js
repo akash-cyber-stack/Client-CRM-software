@@ -20,14 +20,14 @@ function parseStatus(value, hasAssignee) {
   return hasAssignee ? 'ASSIGNED' : 'NEW';
 }
 
-async function loadExistingPhones() {
-  const leads = await prisma.lead.findMany({ select: { phone: true } });
+async function loadExistingPhones(companyId) {
+  const leads = await prisma.lead.findMany({ where: { companyId }, select: { phone: true } });
   return new Set(leads.map((l) => normalizePhone(l.phone)).filter(Boolean));
 }
 
-async function getActiveSalesEmployees() {
+async function getActiveSalesEmployees(companyId) {
   return prisma.user.findMany({
-    where: { role: 'SALES_EMPLOYEE', status: 'ACTIVE' },
+    where: { companyId, role: 'SALES_EMPLOYEE', status: 'ACTIVE' },
     orderBy: { createdAt: 'asc' },
     select: { id: true, name: true },
   });
@@ -51,34 +51,38 @@ function resolveAssignee(row, { assignmentMode, assignToEmployeeId, employees, r
  * @param {'ROUND_ROBIN'|'ASSIGN_TO'} params.assignmentMode
  * @param {string} [params.assignToEmployeeId]
  */
-export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId, assignedBy }) {
+export async function importLeadsBulk({ companyId, rows, assignmentMode, assignToEmployeeId, assignedBy }) {
+  if (!companyId) {
+    throw Object.assign(new Error('companyId required'), { statusCode: 400 });
+  }
+
   const totalRows = rows.length;
   const failed = [];
   const duplicates = [];
   const toCreate = [];
   const seenPhones = new Set();
-  const existingPhones = await loadExistingPhones();
+  const existingPhones = await loadExistingPhones(companyId);
 
   if (assignmentMode === 'ASSIGN_TO') {
     if (!assignToEmployeeId) {
       throw Object.assign(new Error('assignToEmployeeId required when assignmentMode is ASSIGN_TO'), { statusCode: 400 });
     }
     const emp = await prisma.user.findFirst({
-      where: { id: assignToEmployeeId, role: 'SALES_EMPLOYEE', status: 'ACTIVE' },
+      where: { id: assignToEmployeeId, companyId, role: 'SALES_EMPLOYEE', status: 'ACTIVE' },
     });
     if (!emp) {
       throw Object.assign(new Error('Selected employee not found or inactive'), { statusCode: 400 });
     }
   }
 
-  const employees = assignmentMode === 'ROUND_ROBIN' ? await getActiveSalesEmployees() : [];
+  const employees = assignmentMode === 'ROUND_ROBIN' ? await getActiveSalesEmployees(companyId) : [];
   if (assignmentMode === 'ROUND_ROBIN' && !employees.length) {
     throw Object.assign(new Error('No active sales employees for round-robin assignment'), { statusCode: 400 });
   }
 
   const rrState = { index: 0 };
   if (assignmentMode === 'ROUND_ROBIN') {
-    const state = await prisma.leadAssignmentState.findUnique({ where: { id: 'default' } });
+    const state = await prisma.leadAssignmentState.findUnique({ where: { companyId } });
     if (state?.lastEmployeeId) {
       const idx = employees.findIndex((e) => e.id === state.lastEmployeeId);
       rrState.index = idx >= 0 ? idx + 1 : 0;
@@ -123,6 +127,7 @@ export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId
     }
 
     toCreate.push({
+      companyId,
       customerName,
       phone: phoneRaw,
       email: raw.email ? String(raw.email).trim() : null,
@@ -181,7 +186,7 @@ export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId
 
     if (assignedBy && ADMIN_ASSIGN_ROLES.includes(assignedBy.role)) {
       const managers = await prisma.user.findMany({
-        where: { role: 'MANAGER', status: 'ACTIVE' },
+        where: { companyId, role: 'MANAGER', status: 'ACTIVE' },
         select: { id: true },
       });
       await Promise.all(
@@ -199,8 +204,8 @@ export async function importLeadsBulk({ rows, assignmentMode, assignToEmployeeId
 
   if (assignmentMode === 'ROUND_ROBIN' && lastAssignedId) {
     await prisma.leadAssignmentState.upsert({
-      where: { id: 'default' },
-      create: { id: 'default', lastEmployeeId: lastAssignedId },
+      where: { companyId },
+      create: { companyId, lastEmployeeId: lastAssignedId },
       update: { lastEmployeeId: lastAssignedId },
     });
   }

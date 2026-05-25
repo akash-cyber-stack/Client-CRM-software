@@ -27,9 +27,14 @@ export default function Navbar() {
             </svg>
           </button>
         )}
-        <p className="text-xs sm:text-sm text-muted truncate">
-          Welcome, <span className="text-main font-medium">{user?.name}</span>
-        </p>
+        <div className="min-w-0 truncate">
+          <p className="text-xs sm:text-sm text-muted truncate">
+            Welcome, <span className="text-main font-medium">{user?.name}</span>
+          </p>
+          {user?.companyName && (
+            <p className="text-[10px] sm:text-xs text-primary-500/90 truncate font-mono">{user.companyName}</p>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         <ThemeToggle />

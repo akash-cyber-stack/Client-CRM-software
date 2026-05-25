@@ -2,8 +2,8 @@ import prisma from '../config/db.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { initiateOutboundCall } from '../services/ivrCallService.js';
 
-function buildCallWhere(query, employeeScopeId) {
-  const where = {};
+function buildCallWhere(companyId, query, employeeScopeId) {
+  const where = { companyId };
   if (employeeScopeId) where.employeeId = employeeScopeId;
   if (query.employeeId) where.employeeId = query.employeeId;
   if (query.leadId) where.leadId = query.leadId;
@@ -26,7 +26,7 @@ const callInclude = {
 };
 
 export const listCalls = asyncHandler(async (req, res) => {
-  const where = buildCallWhere(req.query, req.employeeScopeId);
+  const where = buildCallWhere(req.companyId, req.query, req.employeeScopeId);
 
   if (req.query.source) {
     where.lead = { source: req.query.source };
@@ -50,8 +50,8 @@ export const listCalls = asyncHandler(async (req, res) => {
 });
 
 export const getCall = asyncHandler(async (req, res) => {
-  const call = await prisma.callLog.findUnique({
-    where: { id: req.params.id },
+  const call = await prisma.callLog.findFirst({
+    where: { id: req.params.id, companyId: req.companyId },
     include: callInclude,
   });
   if (!call) return res.status(404).json({ success: false, message: 'Call not found' });
@@ -67,7 +67,7 @@ export const getCallsByEmployee = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
   const calls = await prisma.callLog.findMany({
-    where: { employeeId },
+    where: { companyId: req.companyId, employeeId },
     include: callInclude,
     orderBy: { callStartTime: 'desc' },
   });
@@ -76,13 +76,13 @@ export const getCallsByEmployee = asyncHandler(async (req, res) => {
 
 export const getCallsByLead = asyncHandler(async (req, res) => {
   const { leadId } = req.params;
-  const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+  const lead = await prisma.lead.findFirst({ where: { id: leadId, companyId: req.companyId } });
   if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
   if (req.employeeScopeId && lead.assignedToId !== req.employeeScopeId) {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
   const calls = await prisma.callLog.findMany({
-    where: { leadId },
+    where: { companyId: req.companyId, leadId },
     include: callInclude,
     orderBy: { callStartTime: 'desc' },
   });
@@ -97,7 +97,7 @@ export const initiateCall = asyncHandler(async (req, res) => {
 
   let lead = null;
   if (leadId) {
-    lead = await prisma.lead.findUnique({ where: { id: leadId } });
+    lead = await prisma.lead.findFirst({ where: { id: leadId, companyId: req.companyId } });
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
     if (req.employeeScopeId && lead.assignedToId !== req.employeeScopeId) {
       return res.status(403).json({ success: false, message: 'Access denied' });

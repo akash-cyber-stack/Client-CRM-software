@@ -23,7 +23,7 @@ const CALL_STATUS_MAP = {
   BUSY: 'BUSY',
 };
 
-export async function processIvrCallCompleted(payload) {
+export async function processIvrCallCompleted(payload, companyId) {
   const {
     call_id: externalCallId,
     ivr_provider_call_id: ivrProviderCallId,
@@ -47,20 +47,20 @@ export async function processIvrCallCompleted(payload) {
   let employee = null;
   if (ivrAgentId) {
     employee = await prisma.user.findFirst({
-      where: { ivrAgentId: String(ivrAgentId), status: 'ACTIVE' },
+      where: { companyId, ivrAgentId: String(ivrAgentId), status: 'ACTIVE' },
     });
   }
   if (!employee && employeeIdFromPayload) {
-    employee = await prisma.user.findUnique({ where: { id: employeeIdFromPayload } });
+    employee = await prisma.user.findFirst({ where: { id: employeeIdFromPayload, companyId } });
   }
 
   // Match lead by phone
   let lead = null;
   if (leadIdFromPayload) {
-    lead = await prisma.lead.findUnique({ where: { id: leadIdFromPayload } });
+    lead = await prisma.lead.findFirst({ where: { id: leadIdFromPayload, companyId } });
   }
   if (!lead && normalized) {
-    const leads = await prisma.lead.findMany();
+    const leads = await prisma.lead.findMany({ where: { companyId } });
     lead = leads.find((l) => normalizePhone(l.phone) === normalized) || null;
   }
 
@@ -73,6 +73,7 @@ export async function processIvrCallCompleted(payload) {
 
   const callLog = await prisma.callLog.create({
     data: {
+      companyId,
       leadId: lead?.id || null,
       employeeId: employee?.id || null,
       customerPhone: phone,

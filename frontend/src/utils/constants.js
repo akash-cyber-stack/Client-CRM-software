@@ -27,6 +27,28 @@ export const SOURCE_LABELS = {
   MANUAL: 'Manual',
 };
 
+export const STATUS_LABELS = {
+  NEW: 'New',
+  ASSIGNED: 'Assigned',
+  CONTACTED: 'Contacted',
+  INTERESTED: 'Interested',
+  FOLLOW_UP: 'Follow-up',
+  CONVERTED: 'Converted',
+  NOT_INTERESTED: 'Not interested',
+  LOST: 'Lost',
+};
+
+export const STATUS_CHART_COLORS = {
+  NEW: '#3b82f6',
+  ASSIGNED: '#6366f1',
+  CONTACTED: '#06b6d4',
+  INTERESTED: '#10b981',
+  FOLLOW_UP: '#f59e0b',
+  CONVERTED: '#22c55e',
+  NOT_INTERESTED: '#94a3b8',
+  LOST: '#ef4444',
+};
+
 export const formatDate = (d) =>
   d ? new Date(d).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 

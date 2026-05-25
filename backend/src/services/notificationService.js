@@ -22,7 +22,12 @@ export async function notifyOnLeadAssignment({ lead, assigneeId, assignedBy }) {
 
   const assigneeName = lead.assignedTo?.name || 'a team member';
   const managers = await prisma.user.findMany({
-    where: { role: 'MANAGER', status: 'ACTIVE', id: { not: assigneeId } },
+    where: {
+      companyId: lead.companyId,
+      role: 'MANAGER',
+      status: 'ACTIVE',
+      id: { not: assigneeId },
+    },
     select: { id: true },
   });
 
@@ -75,10 +80,10 @@ export async function getUserNotifications(userId, { unreadOnly = false, limit =
   });
 }
 
-export async function pollNotifications(userId, role, { since, runAutomation = true } = {}) {
-  if (runAutomation) {
+export async function pollNotifications(userId, role, companyId, { since, runAutomation = true } = {}) {
+  if (runAutomation && companyId) {
     const { runAutomationsForUser } = await import('./automationService.js');
-    await runAutomationsForUser(userId, role);
+    await runAutomationsForUser(userId, role, companyId);
   }
 
   const notifications = await getUserNotifications(userId, {

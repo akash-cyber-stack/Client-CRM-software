@@ -13,13 +13,15 @@ export default function EmployeePerformanceChart({ data, chartTick, tooltipStyle
   };
 
   return (
-    <div className="card">
-      <h2 className="font-semibold mb-2 text-main">Employee Performance</h2>
-      <p className="text-xs text-muted mb-4">Tap a blue bar (Leads) to open that employee&apos;s performance</p>
-      <div className="w-full overflow-x-auto">
+    <div className="dashboard-chart-card card">
+      <div className="dashboard-chart-head">
+        <h2 className="dashboard-chart-title">Employee performance</h2>
+        <p className="dashboard-chart-sub">Tap blue bar (Leads) for details</p>
+      </div>
+      <div className="w-full overflow-x-auto -webkit-overflow-scrolling-touch">
         <div
-          className="h-[200px] sm:h-[220px]"
-          style={{ minWidth: Math.max(280, data.length * 72) }}
+          className="dashboard-chart-h"
+          style={{ minWidth: Math.max(280, data.length * 72), height: '240px' }}
         >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ bottom: 20 }}>

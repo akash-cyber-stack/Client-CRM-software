@@ -3,10 +3,10 @@ import { getAssignmentMethod } from './settingsService.js';
 import { createNotification, notifyOnLeadAssignment } from './notificationService.js';
 import { logActivity } from './leadActivityService.js';
 
-/** Get active sales employees for round-robin */
-async function getActiveSalesEmployees() {
+async function getActiveSalesEmployees(companyId) {
   return prisma.user.findMany({
     where: {
+      companyId,
       role: 'SALES_EMPLOYEE',
       status: 'ACTIVE',
     },
@@ -14,14 +14,13 @@ async function getActiveSalesEmployees() {
   });
 }
 
-/** Round-robin: assign next active employee, skip inactive */
-export async function assignLeadRoundRobin(leadId) {
-  const employees = await getActiveSalesEmployees();
+export async function assignLeadRoundRobin(leadId, companyId) {
+  const employees = await getActiveSalesEmployees(companyId);
   if (!employees.length) return null;
 
-  let state = await prisma.leadAssignmentState.findUnique({ where: { id: 'default' } });
+  let state = await prisma.leadAssignmentState.findUnique({ where: { companyId } });
   if (!state) {
-    state = await prisma.leadAssignmentState.create({ data: { id: 'default' } });
+    state = await prisma.leadAssignmentState.create({ data: { companyId } });
   }
 
   let startIndex = 0;
@@ -33,12 +32,12 @@ export async function assignLeadRoundRobin(leadId) {
   const employee = employees[startIndex];
 
   await prisma.leadAssignmentState.update({
-    where: { id: 'default' },
+    where: { companyId },
     data: { lastEmployeeId: employee.id },
   });
 
   const lead = await prisma.lead.update({
-    where: { id: leadId },
+    where: { id: leadId, companyId },
     data: {
       assignedToId: employee.id,
       status: 'ASSIGNED',
@@ -62,20 +61,25 @@ export async function assignLeadRoundRobin(leadId) {
   return lead;
 }
 
-export async function autoAssignLead(leadId) {
-  const method = await getAssignmentMethod();
+export async function autoAssignLead(leadId, companyId) {
+  const method = await getAssignmentMethod(companyId);
   if (method === 'MANUAL') return null;
-  return assignLeadRoundRobin(leadId);
+  return assignLeadRoundRobin(leadId, companyId);
 }
 
-export async function manualAssignLead(leadId, employeeId, { assignedBy } = {}) {
+export async function manualAssignLead(leadId, employeeId, companyId, { assignedBy } = {}) {
   const employee = await prisma.user.findFirst({
-    where: { id: employeeId, role: { in: ['SALES_EMPLOYEE', 'MANAGER'] }, status: 'ACTIVE' },
+    where: {
+      id: employeeId,
+      companyId,
+      role: { in: ['SALES_EMPLOYEE', 'MANAGER'] },
+      status: 'ACTIVE',
+    },
   });
   if (!employee) throw Object.assign(new Error('Employee not found or inactive'), { statusCode: 404 });
 
   const lead = await prisma.lead.update({
-    where: { id: leadId },
+    where: { id: leadId, companyId },
     data: { assignedToId: employeeId, status: 'ASSIGNED' },
     include: { assignedTo: { select: { id: true, name: true, email: true } } },
   });

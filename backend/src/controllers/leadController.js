@@ -15,7 +15,7 @@ function parseListLimit(raw) {
 }
 
 export const listLeads = asyncHandler(async (req, res) => {
-  const where = buildLeadWhere(req.query, req.employeeScopeId);
+  const where = buildLeadWhere(req.companyId, req.query, req.employeeScopeId);
   const page = Math.max(1, parseInt(req.query.page || '1', 10) || 1);
   const limit = parseListLimit(req.query.limit);
   const skip = (page - 1) * limit;
@@ -59,7 +59,9 @@ export const getLead = asyncHandler(async (req, res) => {
     },
   });
 
-  if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+  if (!lead || lead.companyId !== req.companyId) {
+    return res.status(404).json({ success: false, message: 'Lead not found' });
+  }
   if (req.employeeScopeId && lead.assignedToId !== req.employeeScopeId) {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
@@ -83,13 +85,14 @@ export const createLead = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Valid phone number required' });
   }
 
-  const existing = await findLeadByPhoneOrEmail(body.phone, body.email);
+  const existing = await findLeadByPhoneOrEmail(req.companyId, body.phone, body.email);
   if (existing) {
     return res.status(409).json({ success: false, message: 'Lead with this phone already exists', data: existing });
   }
 
   const lead = await prisma.lead.create({
     data: {
+      companyId: req.companyId,
       customerName: body.customerName,
       phone: body.phone,
       email: body.email,
@@ -114,7 +117,7 @@ export const createLead = asyncHandler(async (req, res) => {
   } else if (req.body.autoAssign !== false) {
     try {
       const { autoAssignLead } = await import('../services/assignmentService.js');
-      await autoAssignLead(lead.id);
+      await autoAssignLead(lead.id, req.companyId);
     } catch (assignErr) {
       console.warn('[createLead] auto-assign skipped:', assignErr.message);
     }
@@ -151,6 +154,7 @@ export const bulkImportLeads = asyncHandler(async (req, res) => {
 
   const { importLeadsBulk } = await import('../services/leadImportService.js');
   const result = await importLeadsBulk({
+    companyId: req.companyId,
     rows: leads,
     assignmentMode: mode,
     assignToEmployeeId: assignToEmployeeId || assignedToId,
@@ -162,7 +166,7 @@ export const bulkImportLeads = asyncHandler(async (req, res) => {
 
 export const updateLead = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const existing = await prisma.lead.findUnique({ where: { id } });
+  const existing = await prisma.lead.findFirst({ where: { id, companyId: req.companyId } });
   if (!existing) return res.status(404).json({ success: false, message: 'Lead not found' });
   if (req.employeeScopeId && existing.assignedToId !== req.employeeScopeId) {
     return res.status(403).json({ success: false, message: 'Access denied' });
@@ -199,22 +203,22 @@ export const updateLead = asyncHandler(async (req, res) => {
   res.json({ success: true, data: lead });
 });
 
-async function deleteLeadsByIds(ids) {
+async function deleteLeadsByIds(companyId, ids) {
   const uniqueIds = [...new Set(ids.filter(Boolean))];
   if (!uniqueIds.length) return 0;
 
   await prisma.callLog.updateMany({
-    where: { leadId: { in: uniqueIds } },
+    where: { companyId, leadId: { in: uniqueIds } },
     data: { leadId: null, isLinked: false },
   });
 
-  const result = await prisma.lead.deleteMany({ where: { id: { in: uniqueIds } } });
+  const result = await prisma.lead.deleteMany({ where: { companyId, id: { in: uniqueIds } } });
   return result.count;
 }
 
 export const deleteLead = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const deleted = await deleteLeadsByIds([id]);
+  const deleted = await deleteLeadsByIds(req.companyId, [id]);
   if (!deleted) {
     return res.status(404).json({ success: false, message: 'Lead not found' });
   }
@@ -226,7 +230,7 @@ export const bulkDeleteLeads = asyncHandler(async (req, res) => {
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ success: false, message: 'ids array is required' });
   }
-  const deletedCount = await deleteLeadsByIds(ids);
+  const deletedCount = await deleteLeadsByIds(req.companyId, ids);
   res.json({
     success: true,
     message: `${deletedCount} lead(s) deleted`,
@@ -238,7 +242,7 @@ export const assignLead = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { employeeId } = req.body;
   if (!employeeId) return res.status(400).json({ success: false, message: 'employeeId required' });
-  const lead = await manualAssignLead(id, employeeId, {
+  const lead = await manualAssignLead(id, employeeId, req.companyId, {
     assignedBy: { id: req.user.id, name: req.user.name, role: req.user.role },
   });
   res.json({ success: true, data: lead });
@@ -249,7 +253,7 @@ export const addNote = asyncHandler(async (req, res) => {
   const { content } = req.body;
   if (!content) return res.status(400).json({ success: false, message: 'Note content required' });
 
-  const lead = await prisma.lead.findUnique({ where: { id } });
+  const lead = await prisma.lead.findFirst({ where: { id, companyId: req.companyId } });
   if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
   if (req.employeeScopeId && lead.assignedToId !== req.employeeScopeId) {
     return res.status(403).json({ success: false, message: 'Access denied' });
@@ -267,7 +271,7 @@ export const addFollowUp = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { scheduledAt, remarks, employeeId } = req.body;
 
-  const lead = await prisma.lead.findUnique({ where: { id } });
+  const lead = await prisma.lead.findFirst({ where: { id, companyId: req.companyId } });
   if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
   if (req.employeeScopeId && lead.assignedToId !== req.employeeScopeId) {
     return res.status(403).json({ success: false, message: 'Access denied' });

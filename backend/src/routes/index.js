@@ -8,10 +8,14 @@ import webhookRoutes from './webhookRoutes.js';
 import followUpRoutes from './followUpRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import settingsRoutes from './settingsRoutes.js';
+import companyRoutes from './companyRoutes.js';
+import billingRoutes from './billingRoutes.js';
 
 const router = Router();
 
 router.use('/auth', authRoutes);
+router.use('/billing', billingRoutes);
+router.use('/companies', companyRoutes);
 router.use('/employees', employeeRoutes);
 router.use('/leads', leadRoutes);
 router.use('/calls', callRoutes);

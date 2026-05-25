@@ -7,7 +7,8 @@
     "postinstall": "npx prisma generate --schema=backend/prisma/schema.prisma",
     "vercel-install": "npm install && npm install --prefix frontend",
     "vercel-build": "npx prisma generate --schema=backend/prisma/schema.prisma && npm run build --prefix frontend",
-    "dev": "concurrently -n api,web -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev:api\" \"npm run dev:frontend\"",
+    "dev:api": "npm run dev --prefix backend",
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend"
   },
@@ -19,7 +20,8 @@
     "express": "^4.21.1",
     "express-validator": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "nodemailer": "^8.0.8"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

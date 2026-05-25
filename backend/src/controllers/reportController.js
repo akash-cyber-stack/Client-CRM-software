@@ -17,9 +17,15 @@ function dateFilter(query) {
   return filter;
 }
 
+function leadWhereForReq(req, extra = {}) {
+  const where = { companyId: req.companyId, ...extra };
+  if (req.employeeScopeId) where.assignedToId = req.employeeScopeId;
+  return where;
+}
+
 export const dashboard = asyncHandler(async (req, res) => {
   const scopeId = req.employeeScopeId;
-  const leadWhere = scopeId ? { assignedToId: scopeId } : {};
+  const leadWhere = leadWhereForReq(req);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -40,6 +46,8 @@ export const dashboard = asyncHandler(async (req, res) => {
     nonCampaignLeadsCount,
     employeePerformance,
     myPendingLeads,
+    statusBreakdown,
+    leadsLast7Days,
   ] = await Promise.all([
     prisma.lead.count({ where: leadWhere }),
     prisma.lead.count({ where: { ...leadWhere, status: 'NEW' } }),
@@ -48,19 +56,20 @@ export const dashboard = asyncHandler(async (req, res) => {
     prisma.followUp.count({
       where: {
         ...(scopeId ? { employeeId: scopeId } : {}),
+        lead: { companyId: req.companyId },
         scheduledAt: { gte: today, lt: tomorrow },
         isCompleted: false,
       },
     }),
     scopeId
       ? Promise.resolve(0)
-      : prisma.callLog.count(),
+      : prisma.callLog.count({ where: { companyId: req.companyId } }),
     scopeId
       ? Promise.resolve(0)
-      : prisma.callLog.count({ where: { callStatus: 'ANSWERED' } }),
+      : prisma.callLog.count({ where: { companyId: req.companyId, callStatus: 'ANSWERED' } }),
     scopeId
       ? Promise.resolve(0)
-      : prisma.callLog.count({ where: { callStatus: 'MISSED' } }),
+      : prisma.callLog.count({ where: { companyId: req.companyId, callStatus: 'MISSED' } }),
     prisma.lead.groupBy({ by: ['source'], where: leadWhere, _count: true }),
     prisma.lead.groupBy({
       by: ['campaignName'],
@@ -77,7 +86,7 @@ export const dashboard = asyncHandler(async (req, res) => {
     scopeId
       ? null
       : prisma.user.findMany({
-          where: { role: { in: PERFORMANCE_ROLES } },
+          where: { companyId: req.companyId, role: { in: PERFORMANCE_ROLES } },
           select: {
             id: true,
             name: true,
@@ -88,11 +97,32 @@ export const dashboard = asyncHandler(async (req, res) => {
     scopeId
       ? prisma.lead.count({
           where: {
+            companyId: req.companyId,
             assignedToId: scopeId,
             status: { in: ['ASSIGNED', 'CONTACTED', 'INTERESTED', 'FOLLOW_UP'] },
           },
         })
       : null,
+    prisma.lead.groupBy({ by: ['status'], where: leadWhere, _count: true }),
+    (async () => {
+      const days = [];
+      for (let i = 6; i >= 0; i -= 1) {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - i);
+        const next = new Date(d);
+        next.setDate(next.getDate() + 1);
+        const count = await prisma.lead.count({
+          where: { ...leadWhere, createdAt: { gte: d, lt: next } },
+        });
+        days.push({
+          date: d.toISOString().slice(0, 10),
+          label: d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
+          count,
+        });
+      }
+      return days;
+    })(),
   ]);
 
   const conversionRate =
@@ -123,6 +153,13 @@ export const dashboard = asyncHandler(async (req, res) => {
       })),
       myPendingLeads,
       myAssignedLeads: scopeId ? totalLeads : undefined,
+      statusBreakdown: statusBreakdown.map((s) => ({ status: s.status, count: s._count })),
+      leadsLast7Days,
+      callBreakdown: [
+        { name: 'Answered', value: answeredCalls, key: 'ANSWERED' },
+        { name: 'Missed', value: missedCalls, key: 'MISSED' },
+        { name: 'Other', value: Math.max(0, totalCalls - answeredCalls - missedCalls), key: 'OTHER' },
+      ].filter((c) => c.value > 0 || !scopeId),
     },
   });
 });
@@ -131,6 +168,7 @@ export const employeeReport = asyncHandler(async (req, res) => {
   const dateF = dateFilter(req.query);
   const employees = await prisma.user.findMany({
     where: {
+      companyId: req.companyId,
       role: { in: ['SALES_EMPLOYEE', 'MANAGER'] },
       ...(req.query.employeeId ? { id: req.query.employeeId } : {}),
     },
@@ -163,7 +201,7 @@ export const employeeReport = asyncHandler(async (req, res) => {
 });
 
 export const callReport = asyncHandler(async (req, res) => {
-  const where = {};
+  const where = { companyId: req.companyId };
   if (req.employeeScopeId) where.employeeId = req.employeeScopeId;
   if (req.query.employeeId) where.employeeId = req.query.employeeId;
   if (req.query.fromDate || req.query.toDate) {
@@ -185,7 +223,7 @@ export const callReport = asyncHandler(async (req, res) => {
 });
 
 export const campaignReport = asyncHandler(async (req, res) => {
-  const where = dateFilter(req.query);
+  const where = { companyId: req.companyId, ...dateFilter(req.query) };
   if (req.query.source) {
     where.source = req.query.source;
   } else {
@@ -209,7 +247,7 @@ export const campaignReport = asyncHandler(async (req, res) => {
 });
 
 export const conversionReport = asyncHandler(async (req, res) => {
-  const where = dateFilter(req.query);
+  const where = { companyId: req.companyId, ...dateFilter(req.query) };
   if (req.query.source) where.source = req.query.source;
   if (req.employeeScopeId) where.assignedToId = req.employeeScopeId;
   if (req.query.employeeId) where.assignedToId = req.query.employeeId;
@@ -288,7 +326,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
   }
 
   const employee = await prisma.user.findFirst({
-    where: { id, role: { in: PERFORMANCE_ROLES } },
+    where: { id, companyId: req.companyId, role: { in: PERFORMANCE_ROLES } },
     select: { id: true, name: true, email: true, role: true, department: true, phone: true },
   });
   if (!employee) {
@@ -299,6 +337,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
   const { start: monthStart, end: monthEnd, label: monthLabel } = parseMonthRange(req.query.month);
 
   const leadDayWhere = {
+    companyId: req.companyId,
     assignedToId: id,
     OR: [
       { createdAt: { gte: day, lt: dayEnd } },
@@ -307,6 +346,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
   };
 
   const leadMonthWhere = {
+    companyId: req.companyId,
     assignedToId: id,
     OR: [
       { createdAt: { gte: monthStart, lt: monthEnd } },
@@ -321,7 +361,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.callLog.findMany({
-      where: { employeeId: id, callStartTime: { gte: day, lt: dayEnd } },
+      where: { companyId: req.companyId, employeeId: id, callStartTime: { gte: day, lt: dayEnd } },
       select: {
         id: true,
         callType: true,
@@ -338,12 +378,13 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
       select: { id: true, status: true, createdAt: true },
     }),
     prisma.callLog.findMany({
-      where: { employeeId: id, callStartTime: { gte: monthStart, lt: monthEnd } },
+      where: { companyId: req.companyId, employeeId: id, callStartTime: { gte: monthStart, lt: monthEnd } },
       select: { callStatus: true, callType: true },
     }),
     prisma.followUp.findMany({
       where: {
         employeeId: id,
+        lead: { companyId: req.companyId },
         scheduledAt: { gte: monthStart, lt: monthEnd },
       },
       select: { isCompleted: true },
@@ -360,7 +401,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
 
   const leadsByStatus = await prisma.lead.groupBy({
     by: ['status'],
-    where: { assignedToId: id, createdAt: { gte: monthStart, lt: monthEnd } },
+    where: { companyId: req.companyId, assignedToId: id, createdAt: { gte: monthStart, lt: monthEnd } },
     _count: true,
   });
 
@@ -393,7 +434,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
 
 export const exportEmployeeReport = asyncHandler(async (req, res) => {
   const employees = await prisma.user.findMany({
-    where: { role: { in: PERFORMANCE_ROLES } },
+    where: { companyId: req.companyId, role: { in: PERFORMANCE_ROLES } },
     include: { _count: { select: { assignedLeads: true, callLogs: true } } },
   });
   const rows = employees.map((e) => ({

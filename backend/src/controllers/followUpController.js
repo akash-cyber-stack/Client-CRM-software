@@ -12,6 +12,7 @@ export const listFollowUps = asyncHandler(async (req, res) => {
 
   const where = {
     isCompleted: false,
+    lead: { companyId: req.companyId },
     ...(scopeId ? { employeeId: scopeId } : employeeId ? { employeeId } : {}),
   };
 

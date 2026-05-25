@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../api';
 
 const AuthContext = createContext(null);
@@ -37,7 +37,13 @@ export function AuthProvider({ children }) {
     return u;
   };
 
-  const login = async (email, password) => {
+  const setSessionFromToken = useCallback(async (token) => {
+    localStorage.setItem('token', token);
+    const res = await authApi.me();
+    return setSession(token, res.data.data);
+  }, []);
+
+  const login = async ({ email, password }) => {
     const res = await authApi.login({ email, password });
     const { token, user: u } = res.data.data;
     return setSession(token, u);
@@ -45,6 +51,9 @@ export function AuthProvider({ children }) {
 
   const register = async (data) => {
     const res = await authApi.register(data);
+    if (res.data.data.needsPayment) {
+      return res.data.data;
+    }
     const { token, user: u } = res.data.data;
     return setSession(token, u);
   };
@@ -58,9 +67,23 @@ export function AuthProvider({ children }) {
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'MANAGER';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isSalesEmployee = user?.role === 'SALES_EMPLOYEE';
+  const hasActiveSubscription = user?.subscriptionStatus === 'ACTIVE';
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin, isSuperAdmin, isSalesEmployee }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        setSessionFromToken,
+        logout,
+        isAdmin,
+        isSuperAdmin,
+        isSalesEmployee,
+        hasActiveSubscription,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

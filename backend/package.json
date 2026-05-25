@@ -11,6 +11,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "db:migrate-tenant": "node prisma/apply-multitenant-migration.js && prisma db push",
+    "db:migrate-subscription": "node prisma/apply-subscription-migration.js && prisma db push",
     "db:seed": "node prisma/seed.js",
     "db:clear": "node prisma/clear-data.js",
     "db:reset": "node prisma/clear-data.js && node prisma/seed.js",
@@ -24,7 +26,8 @@
     "express": "^4.21.1",
     "express-validator": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "nodemailer": "^8.0.8"
   },
   "devDependencies": {
     "prisma": "^5.22.0"
