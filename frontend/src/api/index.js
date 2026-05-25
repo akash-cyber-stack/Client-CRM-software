@@ -54,7 +54,8 @@ export const callsApi = {
 
 export const reportsApi = {
   dashboard: () => client.get('/reports/dashboard'),
-  employeePerformance: (params) => client.get('/reports/employee-performance', { params }),
+  employeePerformance: (employeeId, params) =>
+    client.get(`/reports/employees/${employeeId}/performance`, { params }),
   leadSources: () => client.get('/reports/lead-sources'),
   campaigns: () => client.get('/reports/campaigns'),
 };

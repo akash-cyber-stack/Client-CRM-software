@@ -330,7 +330,7 @@ export const employeePerformanceDetail = asyncHandler(async (req, res) => {
   }
 
   const employee = await prisma.user.findFirst({
-    where: { id, companyId: req.companyId, role: { in: PERFORMANCE_ROLES } },
+    where: { id, companyId: req.companyId, status: 'ACTIVE' },
     select: { id: true, name: true, email: true, role: true, department: true, phone: true },
   });
   if (!employee) {

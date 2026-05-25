@@ -24,10 +24,13 @@ export function getApiErrorMessage(err, fallback = 'Something went wrong') {
   if (!err.response) {
     const code = err.code || '';
     if (code === 'ECONNABORTED') return 'Request timed out. Please try again.';
-    if (import.meta.env.DEV) {
-      return 'Cannot reach API. Run: npm run dev (backend port 5000 + frontend).';
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isLocal =
+      host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
+    if (import.meta.env.DEV && isLocal) {
+      return 'Cannot reach API. Run from project root: npm run dev';
     }
-    return 'Cannot reach server. Check your connection and try again.';
+    return 'Cannot reach server. Please refresh the page and try again.';
   }
 
   const data = err.response.data;

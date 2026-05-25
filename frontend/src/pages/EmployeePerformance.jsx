@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatusBadge from '../components/StatusBadge';
 import { getApiErrorMessage } from '../utils/apiError';
-import { useToast } from '../context/ToastContext';
 import { formatDate } from '../utils/constants';
 
 function todayStr() {
@@ -30,19 +29,22 @@ export default function EmployeePerformance() {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAdmin } = useAuth();
-  const toast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [date, setDate] = useState(searchParams.get('date') || todayStr());
   const [month, setMonth] = useState(searchParams.get('month') || monthStr());
 
   const load = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const res = await reportsApi.employeePerformance(id, { date, month });
       setData(res.data.data);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to load performance'));
+      const msg = getApiErrorMessage(err, 'Failed to load performance');
+      setLoadError(msg);
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -70,6 +72,19 @@ export default function EmployeePerformance() {
   }
 
   if (loading) return <LoadingSpinner />;
+  if (loadError) {
+    return (
+      <div className="page-enter max-w-5xl">
+        <Link to="/employees" className="text-primary-500 text-sm hover:underline mb-4 inline-block">
+          ← Back to Employees
+        </Link>
+        <div className="alert-error">{loadError}</div>
+        <button type="button" className="btn-primary mt-4" onClick={load}>
+          Retry
+        </button>
+      </div>
+    );
+  }
   if (!data) return null;
 
   const { employee, daily, monthly } = data;
