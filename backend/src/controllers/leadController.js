@@ -5,7 +5,9 @@ import { manualAssignLead } from '../services/assignmentService.js';
 import { logActivity, getLeadTimeline } from '../services/leadActivityService.js';
 import { isValidPhone } from '../utils/phone.js';
 
-const LIST_LEADS_MAX = 5000;
+import { MAX_LIST_LEADS, MAX_BULK_DELETE } from '../constants/limits.js';
+
+const LIST_LEADS_MAX = MAX_LIST_LEADS;
 
 function parseListLimit(raw) {
   if (raw === 'all' || raw === '0') return LIST_LEADS_MAX;
@@ -229,6 +231,12 @@ export const bulkDeleteLeads = asyncHandler(async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ success: false, message: 'ids array is required' });
+  }
+  if (ids.length > MAX_BULK_DELETE) {
+    return res.status(400).json({
+      success: false,
+      message: `Delete at most ${MAX_BULK_DELETE} leads at a time`,
+    });
   }
   const deletedCount = await deleteLeadsByIds(req.companyId, ids);
   res.json({

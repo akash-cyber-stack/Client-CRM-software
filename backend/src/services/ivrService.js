@@ -60,8 +60,13 @@ export async function processIvrCallCompleted(payload, companyId) {
     lead = await prisma.lead.findFirst({ where: { id: leadIdFromPayload, companyId } });
   }
   if (!lead && normalized) {
-    const leads = await prisma.lead.findMany({ where: { companyId } });
-    lead = leads.find((l) => normalizePhone(l.phone) === normalized) || null;
+    const suffix = normalized.slice(-10);
+    const candidates = await prisma.lead.findMany({
+      where: { companyId, phone: { contains: suffix } },
+      select: { id: true, phone: true, customerName: true },
+      take: 10,
+    });
+    lead = candidates.find((l) => normalizePhone(l.phone) === normalized) || null;
   }
 
   const isLinked = !!(lead && employee);

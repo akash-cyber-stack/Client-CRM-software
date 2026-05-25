@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { MAX_PAGE_SIZE } from '../constants/limits.js';
 import { initiateOutboundCall } from '../services/ivrCallService.js';
 
 function buildCallWhere(companyId, query, employeeScopeId) {
@@ -32,8 +33,8 @@ export const listCalls = asyncHandler(async (req, res) => {
     where.lead = { source: req.query.source };
   }
 
-  const page = parseInt(req.query.page || '1', 10);
-  const limit = parseInt(req.query.limit || '20', 10);
+  const page = Math.max(1, parseInt(req.query.page || '1', 10) || 1);
+  const limit = Math.min(Math.max(1, parseInt(req.query.limit || '20', 10) || 20), MAX_PAGE_SIZE);
 
   const [calls, total] = await Promise.all([
     prisma.callLog.findMany({

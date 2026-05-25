@@ -24,10 +24,28 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
+const RETRY_STATUSES = new Set([503, 429]);
+const RETRY_METHODS = new Set(['get', 'head']);
+
 client.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
+  async (err) => {
+    const config = err.config;
+    const status = err.response?.status;
+    const method = (config?.method || 'get').toLowerCase();
+
+    if (
+      config &&
+      !config.__retry &&
+      RETRY_STATUSES.has(status) &&
+      RETRY_METHODS.has(method)
+    ) {
+      config.__retry = true;
+      await new Promise((r) => setTimeout(r, 800));
+      return client.request(config);
+    }
+
+    if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (!window.location.pathname.includes('/login')) {

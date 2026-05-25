@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../config/db.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { MAX_IMPORT_EMPLOYEES } from '../constants/limits.js';
 
 const userSelect = {
   id: true,
@@ -86,6 +87,13 @@ export const importEmployees = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'employees array is required' });
   }
 
+  if (employees.length > MAX_IMPORT_EMPLOYEES) {
+    return res.status(400).json({
+      success: false,
+      message: `Import at most ${MAX_IMPORT_EMPLOYEES} employees per file`,
+    });
+  }
+
   const normalizedEmployees = employees.map((employee) => ({
     name: String(employee.name || '').trim(),
     email: String(employee.email || '').trim().toLowerCase(),
@@ -128,22 +136,27 @@ export const importEmployees = asyncHandler(async (req, res) => {
     }
   }
 
-  for (const employee of rowsToCreate) {
-    const passwordHash = await bcrypt.hash(employee.password, 10);
-    await prisma.user.create({
-      data: {
-        companyId: req.companyId,
-        name: employee.name,
-        email: employee.email,
-        phone: employee.phone,
-        passwordHash,
-        role: employee.role,
-        department: employee.department,
-        ivrAgentId: employee.ivrAgentId,
-        ivrExtension: employee.ivrExtension,
-        status: employee.status,
-      },
-    });
+  const BATCH = 25;
+  for (let i = 0; i < rowsToCreate.length; i += BATCH) {
+    const slice = rowsToCreate.slice(i, i + BATCH);
+    await prisma.$transaction(
+      slice.map((employee) =>
+        prisma.user.create({
+          data: {
+            companyId: req.companyId,
+            name: employee.name,
+            email: employee.email,
+            phone: employee.phone,
+            passwordHash: bcrypt.hashSync(employee.password, 10),
+            role: employee.role,
+            department: employee.department,
+            ivrAgentId: employee.ivrAgentId,
+            ivrExtension: employee.ivrExtension,
+            status: employee.status,
+          },
+        })
+      )
+    );
   }
 
   res.status(201).json({

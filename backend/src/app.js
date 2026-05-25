@@ -5,10 +5,22 @@ import prisma from './config/db.js';
 import { env, corsOriginCheck } from './config/env.js';
 import routes from './routes/index.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import { rateLimitByIp, requestTimeout } from './middleware/resilience.js';
+import { withDbRetry } from './utils/dbRetry.js';
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+});
 
 const app = express();
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
 app.use(morgan(env.nodeEnv === 'development' ? 'dev' : 'combined'));
+app.use(requestTimeout);
 
 app.use(
   cors({
@@ -49,7 +61,7 @@ app.get('/api/health', async (_req, res) => {
     });
   }
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await withDbRetry(() => prisma.$queryRaw`SELECT 1`);
     res.json({ ok: true, service: 'sales-lead-crm-api', database: 'connected' });
   } catch (err) {
     res.status(503).json({
@@ -61,7 +73,7 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
-app.use('/api', routes);
+app.use('/api', rateLimitByIp, routes);
 
 app.use(notFound);
 app.use(errorHandler);

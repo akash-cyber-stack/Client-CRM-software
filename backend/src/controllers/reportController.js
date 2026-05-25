@@ -105,23 +105,27 @@ export const dashboard = asyncHandler(async (req, res) => {
       : null,
     prisma.lead.groupBy({ by: ['status'], where: leadWhere, _count: true }),
     (async () => {
-      const days = [];
+      const dayRanges = [];
       for (let i = 6; i >= 0; i -= 1) {
         const d = new Date();
         d.setHours(0, 0, 0, 0);
         d.setDate(d.getDate() - i);
         const next = new Date(d);
         next.setDate(next.getDate() + 1);
-        const count = await prisma.lead.count({
-          where: { ...leadWhere, createdAt: { gte: d, lt: next } },
-        });
-        days.push({
-          date: d.toISOString().slice(0, 10),
-          label: d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
-          count,
-        });
+        dayRanges.push({ d, next });
       }
-      return days;
+      const counts = await Promise.all(
+        dayRanges.map(({ d, next }) =>
+          prisma.lead.count({
+            where: { ...leadWhere, createdAt: { gte: d, lt: next } },
+          })
+        )
+      );
+      return dayRanges.map(({ d }, idx) => ({
+        date: d.toISOString().slice(0, 10),
+        label: d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
+        count: counts[idx],
+      }));
     })(),
   ]);
 

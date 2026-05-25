@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { normalizePhone, isValidPhone } from '../utils/phone.js';
+import { MAX_IMPORT_LEADS, MAX_LEADS_FOR_PHONE_SCAN } from '../constants/limits.js';
 import { logActivity } from './leadActivityService.js';
 import { createNotification } from './notificationService.js';
 
@@ -21,7 +22,18 @@ function parseStatus(value, hasAssignee) {
 }
 
 async function loadExistingPhones(companyId) {
-  const leads = await prisma.lead.findMany({ where: { companyId }, select: { phone: true } });
+  const count = await prisma.lead.count({ where: { companyId } });
+  if (count > MAX_LEADS_FOR_PHONE_SCAN) {
+    throw Object.assign(
+      new Error(`This workspace has ${count} leads. Contact support or import in smaller batches.`),
+      { statusCode: 400 }
+    );
+  }
+  const leads = await prisma.lead.findMany({
+    where: { companyId },
+    select: { phone: true },
+    take: MAX_LEADS_FOR_PHONE_SCAN,
+  });
   return new Set(leads.map((l) => normalizePhone(l.phone)).filter(Boolean));
 }
 
@@ -54,6 +66,13 @@ function resolveAssignee(row, { assignmentMode, assignToEmployeeId, employees, r
 export async function importLeadsBulk({ companyId, rows, assignmentMode, assignToEmployeeId, assignedBy }) {
   if (!companyId) {
     throw Object.assign(new Error('companyId required'), { statusCode: 400 });
+  }
+
+  if (rows.length > MAX_IMPORT_LEADS) {
+    throw Object.assign(
+      new Error(`Import at most ${MAX_IMPORT_LEADS} leads per file`),
+      { statusCode: 400 }
+    );
   }
 
   const totalRows = rows.length;
