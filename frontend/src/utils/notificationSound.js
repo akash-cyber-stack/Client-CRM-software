@@ -60,7 +60,7 @@ export function showDesktopNotification({ title, body, tag, onClick }) {
   const n = new Notification(title, {
     body,
     tag: tag || title,
-    icon: '/vite.svg',
+    icon: '/logo.png',
     requireInteraction: false,
   });
 

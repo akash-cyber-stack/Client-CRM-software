@@ -15,8 +15,8 @@ export default function AuthFlowTabs({ mode, onChange }) {
           className={`auth-flow-tab ${mode === tab.id ? 'auth-flow-tab--active' : ''}`}
           onClick={() => onChange(tab.id)}
         >
-          <span className="hidden sm:inline">{tab.label}</span>
-          <span className="sm:hidden">{tab.short}</span>
+          <span className="auth-flow-tab-label hidden sm:inline">{tab.label}</span>
+          <span className="auth-flow-tab-label sm:hidden">{tab.short}</span>
         </button>
       ))}
     </div>

@@ -6,6 +6,9 @@ import { logActivity, getLeadTimeline } from '../services/leadActivityService.js
 import { isValidPhone } from '../utils/phone.js';
 
 import { MAX_LIST_LEADS, MAX_BULK_DELETE } from '../constants/limits.js';
+import { getNextLeadNumber } from '../services/leadNumberService.js';
+import { checkLeadCapacity } from '../services/planEnforcementService.js';
+import { planLimitMessage } from '../constants/planLimits.js';
 
 const LIST_LEADS_MAX = MAX_LIST_LEADS;
 
@@ -92,9 +95,21 @@ export const createLead = asyncHandler(async (req, res) => {
     return res.status(409).json({ success: false, message: 'Lead with this phone already exists', data: existing });
   }
 
+  const plan = req.user.company?.plan || 'STARTER';
+  const leadCap = await checkLeadCapacity(req.companyId, plan, 1);
+  if (!leadCap.ok) {
+    return res.status(403).json({
+      success: false,
+      message: planLimitMessage(plan, 'leads') || 'Lead limit reached for your plan',
+    });
+  }
+
+  const leadNumber = await getNextLeadNumber(req.companyId);
+
   const lead = await prisma.lead.create({
     data: {
       companyId: req.companyId,
+      leadNumber,
       customerName: body.customerName,
       phone: body.phone,
       email: body.email,

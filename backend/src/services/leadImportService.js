@@ -1,6 +1,9 @@
 import prisma from '../config/db.js';
 import { normalizePhone, isValidPhone } from '../utils/phone.js';
 import { MAX_IMPORT_LEADS, MAX_LEADS_FOR_PHONE_SCAN } from '../constants/limits.js';
+import { reserveLeadNumbers } from './leadNumberService.js';
+import { checkLeadCapacity, getCompanyPlan } from './planEnforcementService.js';
+import { planLimitMessage } from '../constants/planLimits.js';
 import { logActivity } from './leadActivityService.js';
 import { createNotification } from './notificationService.js';
 
@@ -160,14 +163,34 @@ export async function importLeadsBulk({ companyId, rows, assignmentMode, assignT
     });
   }
 
+  const plan = await getCompanyPlan(companyId);
+  let rowsForDb = toCreate;
+  let skippedDueToPlanLimit = 0;
+
+  if (toCreate.length) {
+    const leadCap = await checkLeadCapacity(companyId, plan, toCreate.length);
+    if (!leadCap.ok && leadCap.remaining === 0) {
+      throw Object.assign(
+        new Error(planLimitMessage(plan, 'leads') || 'Lead limit reached for your plan'),
+        { statusCode: 403 }
+      );
+    }
+    if (!leadCap.ok && leadCap.remaining < toCreate.length) {
+      skippedDueToPlanLimit = toCreate.length - leadCap.remaining;
+      rowsForDb = toCreate.slice(0, leadCap.remaining);
+    }
+  }
+
   let importedCount = 0;
   const CHUNK = 50;
   let lastAssignedId = null;
   const allCreated = [];
 
-  for (let i = 0; i < toCreate.length; i += CHUNK) {
-    const chunk = toCreate.slice(i, i + CHUNK);
-    const created = await prisma.lead.createManyAndReturn({ data: chunk });
+  for (let i = 0; i < rowsForDb.length; i += CHUNK) {
+    const chunk = rowsForDb.slice(i, i + CHUNK);
+    const numbers = await reserveLeadNumbers(companyId, chunk.length);
+    const chunkWithSno = chunk.map((row, idx) => ({ ...row, leadNumber: numbers[idx] }));
+    const created = await prisma.lead.createManyAndReturn({ data: chunkWithSno });
     allCreated.push(...created);
     importedCount += created.length;
     lastAssignedId = chunk[chunk.length - 1]?.assignedToId || lastAssignedId;
@@ -234,6 +257,7 @@ export async function importLeadsBulk({ companyId, rows, assignmentMode, assignT
     importedCount,
     duplicateCount: duplicates.length,
     failedCount: failed.length,
+    skippedDueToPlanLimit,
     duplicates,
     failed,
   };

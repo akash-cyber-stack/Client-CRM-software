@@ -140,7 +140,7 @@ export default function Leads() {
   };
 
   const handleDeleteOne = async (lead) => {
-    if (!confirm(`Delete lead #${lead.leadNumber} (${lead.customerName})? This cannot be undone.`)) return;
+    if (!confirm(`Delete lead SNO ${lead.leadNumber} (${lead.customerName})? This cannot be undone.`)) return;
     setDeleting(true);
     try {
       await leadsApi.remove(lead.id);
@@ -278,7 +278,7 @@ export default function Leads() {
                     />
                   </th>
                 )}
-                <th className="pb-3 pr-4">#</th>
+                <th className="pb-3 pr-4">SNO</th>
                 <th className="pb-3 pr-4">Customer</th>
                 <th className="pb-3 pr-4">Phone</th>
                 <th className="pb-3 pr-4">Source</th>
@@ -306,7 +306,7 @@ export default function Leads() {
                       />
                     </td>
                   )}
-                  <td className="py-3 pr-4">#{l.leadNumber}</td>
+                  <td className="py-3 pr-4 tabular-nums">{l.leadNumber}</td>
                   <td className="py-3 pr-4 font-medium">{l.customerName}</td>
                   <td className="py-3 pr-4">{l.phone}</td>
                   <td className="py-3 pr-4">{SOURCE_LABELS[l.source]}</td>

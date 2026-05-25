@@ -23,19 +23,16 @@ function internalGstin() {
 }
 
 async function seedCompanyDefaults(companyId) {
-  await prisma.leadAssignmentState.upsert({
-    where: { companyId },
-    update: {},
-    create: { companyId },
-  });
+  const settingsRows = Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
+    companyId,
+    key,
+    value,
+  }));
 
-  for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-    await prisma.setting.upsert({
-      where: { companyId_key: { companyId, key } },
-      update: {},
-      create: { companyId, key, value },
-    });
-  }
+  await prisma.$transaction([
+    prisma.leadAssignmentState.create({ data: { companyId } }),
+    prisma.setting.createMany({ data: settingsRows, skipDuplicates: true }),
+  ]);
 }
 
 export async function getCompanyById(id) {

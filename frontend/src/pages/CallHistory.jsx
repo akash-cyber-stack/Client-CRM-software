@@ -112,7 +112,7 @@ export default function CallHistory() {
                   <td className="py-3">
                     {c.lead ? (
                       <Link to={`/leads/${c.lead.id}`} className="text-primary-600 hover:underline">
-                        #{c.lead.leadNumber}
+                        SNO {c.lead.leadNumber}
                       </Link>
                     ) : (
                       <span className="text-subtle">Unlinked</span>

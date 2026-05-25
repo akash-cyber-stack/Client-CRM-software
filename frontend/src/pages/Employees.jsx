@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ImportEmployeesModal from '../components/ImportEmployeesModal';
 import { getApiErrorMessage } from '../utils/apiError';
 import { ROLES, PERFORMANCE_ROLES } from '../utils/constants';
+import { getPlanLimits, planUserLimitLabel, remainingUserSlots } from '../utils/planLimits';
 
 const emptyForm = {
   name: '', email: '', phone: '', password: '', role: 'SALES_EMPLOYEE',
@@ -18,6 +19,7 @@ export default function Employees() {
   const { user } = useAuth();
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
+  const [seats, setSeats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -31,6 +33,7 @@ export default function Employees() {
     try {
       const res = await employeesApi.list();
       setEmployees(res.data.data || []);
+      setSeats(res.data.seats || null);
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Failed to load employees'));
     } finally {
@@ -92,10 +95,12 @@ export default function Employees() {
     }
   };
 
-  // Employee add limit for STARTER plan
-  const isStarter = user?.plan === 'STARTER';
-  const employeeLimit = isStarter ? 5 : Infinity;
-  const atLimit = employees.length >= employeeLimit;
+  const planLimits = getPlanLimits(user?.plan);
+  const seatsUsed = seats?.used ?? employees.length;
+  const seatsMax = seats?.max ?? planLimits.maxUsers;
+  const slotsLeft = seats?.remaining ?? remainingUserSlots(user?.plan, seatsUsed);
+  const atLimit = seatsMax != null && seatsUsed >= seatsMax;
+  const limitMessage = planUserLimitLabel(user?.plan);
 
   return (
     <div className="page-enter">
@@ -103,11 +108,42 @@ export default function Employees() {
         <h1 className="text-2xl font-bold">Employees</h1>
         <div className="flex gap-2">
           <button className="btn-secondary" onClick={() => setImportOpen(true)}>Import Employees</button>
-          <button className="btn-primary" onClick={openCreate} disabled={atLimit} title={atLimit ? 'Starter plan allows up to 5 employees' : ''}>+ Add Employee</button>
+          <button
+            className="btn-primary"
+            onClick={openCreate}
+            disabled={atLimit}
+            title={atLimit ? limitMessage || 'User limit reached' : ''}
+          >
+            + Add Employee
+          </button>
         </div>
       </div>
-      {atLimit && (
-        <div className="mb-4 text-amber-600 font-medium">Starter plan allows up to 5 employees. Upgrade your plan to add more.</div>
+
+      {seatsMax != null && (
+        <div
+          className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+            seatsUsed > seatsMax
+              ? 'border-red-500/40 bg-red-500/10 text-red-200'
+              : atLimit
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+                : 'border-default bg-[var(--surface-hover)] text-muted'
+          }`}
+        >
+          <span className="font-semibold text-main tabular-nums">{seatsUsed}</span>
+          <span> / {seatsMax} users</span>
+          <span className="text-muted"> (Super Admin included)</span>
+          {seatsUsed > seatsMax && (
+            <p className="mt-1 text-red-300/90">
+              Over plan limit by {seatsUsed - seatsMax}. Remove extra users — new imports are blocked until you are at or below {seatsMax}.
+            </p>
+          )}
+          {!atLimit && slotsLeft > 0 && seatsUsed <= seatsMax && (
+            <span className="block mt-1 text-muted">You can add {slotsLeft} more from Excel or manual add.</span>
+          )}
+          {atLimit && seatsUsed <= seatsMax && limitMessage && (
+            <p className="mt-1 text-amber-300/90">{limitMessage}</p>
+          )}
+        </div>
       )}
 
       {loading ? <LoadingSpinner /> : (
@@ -186,6 +222,10 @@ export default function Employees() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onSuccess={load}
+        plan={user?.plan}
+        seatsUsed={seatsUsed}
+        seatsMax={seatsMax}
+        slotsLeft={slotsLeft}
       />
     </div>
   );

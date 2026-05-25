@@ -7,7 +7,6 @@ import {
   createCompany,
   hasSuperAdminGlobally,
   hasSuperAdminInCompany,
-  assertSubscriptionActive,
 } from '../services/companyService.js';
 import { signPaymentToken } from '../services/billingService.js';
 import { getPlan } from '../constants/plans.js';
@@ -80,8 +79,28 @@ export const setupStatus = asyncHandler(async (_req, res) => {
   });
 });
 
+function subscriptionErrorResponse(company, emailLower) {
+  const paymentToken = signPaymentToken({
+    companyId: company.id,
+    email: emailLower,
+    plan: company.plan,
+  });
+  return {
+    success: false,
+    message: 'Please complete your plan payment to use the CRM',
+    code: 'PAYMENT_REQUIRED',
+    data: {
+      needsPayment: true,
+      paymentToken,
+      plan: company.plan,
+      planDetails: getPlan(company.plan),
+      companyId: company.id,
+    },
+  };
+}
+
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, phone, password, role, companyName, plan } = req.body;
+  const { name, email, phone, password, role, companyName, plan, createWorkspace } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({
@@ -95,105 +114,127 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   const emailLower = email.toLowerCase();
-  const existingCompany = await resolveCompanyForExistingWorkspace(companyName);
+  const existingCompany = companyName ? await resolveCompanyForExistingWorkspace(companyName) : null;
+  const isCreatingWorkspace = createWorkspace === true || Boolean(plan);
 
-  if (existingCompany) {
-    const requestedRole = role || 'SALES_EMPLOYEE';
-    const superAdminExists = await hasSuperAdminInCompany(existingCompany.id);
-
-    if (requestedRole === 'SUPER_ADMIN') {
-      if (superAdminExists) {
-        return res.status(409).json({
-          success: false,
-          message: 'Super Admin already exists. Register as Manager or Sales Employee.',
-        });
-      }
-    } else if (!['MANAGER', 'SALES_EMPLOYEE'].includes(requestedRole)) {
-      return res.status(400).json({ success: false, message: 'Invalid role' });
-    }
-
-    try {
-      assertSubscriptionActive(existingCompany);
-    } catch (err) {
-      return res.status(err.statusCode || 403).json({
+  if (isCreatingWorkspace) {
+    if (!companyName) {
+      return res.status(400).json({
         success: false,
-        message: err.message,
-        code: err.code,
+        message: 'Company / workspace name is required',
       });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { companyId_email: { companyId: existingCompany.id, email: emailLower } },
+    if (existingCompany) {
+      return res.status(409).json({
+        success: false,
+        message:
+          'This workspace name is already taken. Use a different name or sign in to join an existing workspace.',
+      });
+    }
+
+    const selectedPlan = plan && getPlan(plan) ? plan : 'STARTER';
+    const company = await createCompany({
+      name: companyName,
+      plan: selectedPlan,
+      contactEmail: emailLower,
+      contactPhone: phone || null,
     });
 
-    if (!existingUser) {
-      return res.status(403).json({
-        success: false,
-        message: 'Your employee profile is not imported for this workspace. Contact your admin.',
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        companyId: company.id,
+        name,
+        email: emailLower,
+        phone: phone || null,
+        passwordHash,
+        role: 'SUPER_ADMIN',
+        department: 'Management',
+        status: 'ACTIVE',
+      },
+      include: { company: true },
+    });
+
+    if (company.subscriptionStatus !== 'ACTIVE') {
+      const paymentToken = signPaymentToken({
+        companyId: company.id,
+        email: emailLower,
+        plan: company.plan,
+      });
+      return res.status(201).json({
+        success: true,
+        message: 'Account created. Complete payment to start using the CRM.',
+        data: {
+          needsPayment: true,
+          paymentToken,
+          plan: company.plan,
+          planDetails: getPlan(company.plan),
+          companyId: company.id,
+          user: toSafeUser(user),
+        },
       });
     }
 
-    return res.status(409).json({
-      success: false,
-      message: 'Email already registered. Please sign in.',
+    const token = issueToken(user);
+    return res.status(201).json({
+      success: true,
+      message: 'Registration successful',
+      data: { token, user: toSafeUser(user) },
     });
   }
 
   if (!companyName) {
     return res.status(400).json({
       success: false,
-      message: 'Company / workspace name is required',
+      message: 'Company / workspace name is required to join a workspace',
     });
   }
 
-  const selectedPlan = plan && getPlan(plan) ? plan : 'STARTER';
-  const company = await createCompany({
-    name: companyName,
-    plan: selectedPlan,
-    contactEmail: emailLower,
-    contactPhone: phone || null,
-  });
-
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: {
-      companyId: company.id,
-      name,
-      email: emailLower,
-      phone: phone || null,
-      passwordHash,
-      role: 'SUPER_ADMIN',
-      department: 'Management',
-      status: 'ACTIVE',
-    },
-    include: { company: true },
-  });
-
-  if (company.subscriptionStatus !== 'ACTIVE') {
-    const paymentToken = signPaymentToken({
-      companyId: company.id,
-      email: emailLower,
-      plan: company.plan,
-    });
-    return res.status(201).json({
-      success: true,
-      message: 'Account created. Complete payment to start using the CRM.',
-      data: {
-        needsPayment: true,
-        paymentToken,
-        plan: company.plan,
-        planDetails: getPlan(company.plan),
-        companyId: company.id,
-        user: toSafeUser(user),
-      },
+  if (!existingCompany) {
+    return res.status(404).json({
+      success: false,
+      message: 'Workspace not found. Check the name with your admin or create a new workspace.',
     });
   }
 
-  const token = issueToken(user);
-  res.status(201).json({
-    success: true,
-    message: 'Registration successful',
-    data: { token, user: toSafeUser(user) },
+  const requestedRole = role || 'SALES_EMPLOYEE';
+  const superAdminExists = await hasSuperAdminInCompany(existingCompany.id);
+
+  if (requestedRole === 'SUPER_ADMIN') {
+    if (superAdminExists) {
+      return res.status(409).json({
+        success: false,
+        message: 'Super Admin already exists. Register as Manager or Sales Employee.',
+      });
+    }
+  } else if (!['MANAGER', 'SALES_EMPLOYEE'].includes(requestedRole)) {
+    return res.status(400).json({ success: false, message: 'Invalid role' });
+  }
+
+  if (existingCompany.subscriptionStatus !== 'ACTIVE') {
+    return res.status(403).json(subscriptionErrorResponse(existingCompany, emailLower));
+  }
+
+  if (existingCompany.status !== 'ACTIVE') {
+    return res.status(403).json({ success: false, message: 'Company account is suspended' });
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { companyId_email: { companyId: existingCompany.id, email: emailLower } },
+  });
+
+  if (!existingUser) {
+    return res.status(403).json({
+      success: false,
+      message:
+        'Your email is not on this workspace yet. Ask your admin to import you under Employees, then register again.',
+    });
+  }
+
+  return res.status(409).json({
+    success: false,
+    message: 'Email already registered. Please sign in.',
   });
 });
 

@@ -2,6 +2,8 @@ import bcrypt from 'bcryptjs';
 import prisma from '../config/db.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { MAX_IMPORT_EMPLOYEES } from '../constants/limits.js';
+import { checkUserSeatAvailability, countCompanyUsers, getCompanyPlan } from '../services/planEnforcementService.js';
+import { getPlanLimits, planLimitMessage } from '../constants/planLimits.js';
 
 const userSelect = {
   id: true,
@@ -43,7 +45,21 @@ export const listEmployees = asyncHandler(async (req, res) => {
     select: userSelect,
     orderBy: { createdAt: 'desc' },
   });
-  res.json({ success: true, data: employees });
+
+  const plan = await getCompanyPlan(req.companyId);
+  const used = await countCompanyUsers(req.companyId);
+  const limits = getPlanLimits(plan);
+
+  res.json({
+    success: true,
+    data: employees,
+    seats: {
+      used,
+      max: limits.maxUsers,
+      remaining: limits.maxUsers == null ? null : Math.max(0, limits.maxUsers - used),
+      plan,
+    },
+  });
 });
 
 export const createEmployee = asyncHandler(async (req, res) => {
@@ -60,6 +76,15 @@ export const createEmployee = asyncHandler(async (req, res) => {
     where: { companyId_email: { companyId: req.companyId, email: email.toLowerCase() } },
   });
   if (exists) return res.status(409).json({ success: false, message: 'Email already exists' });
+
+  const plan = req.user.company?.plan || 'STARTER';
+  const seats = await checkUserSeatAvailability(req.companyId, plan, 1);
+  if (!seats.ok) {
+    return res.status(403).json({
+      success: false,
+      message: planLimitMessage(plan, 'users') || 'User limit reached for your plan',
+    });
+  }
 
   const passwordHash = await bcrypt.hash(password || 'Password@123', 10);
   const employee = await prisma.user.create({
@@ -128,12 +153,34 @@ export const importEmployees = asyncHandler(async (req, res) => {
   });
 
   const existingEmails = new Set(existingEmployees.map((employee) => employee.email));
-  const rowsToCreate = [];
+  let rowsToCreate = [];
 
   for (const employee of normalizedEmployees) {
     if (!existingEmails.has(employee.email)) {
       rowsToCreate.push(employee);
     }
+  }
+
+  const plan = req.user.company?.plan || 'STARTER';
+  const seats = await checkUserSeatAvailability(req.companyId, plan, 0);
+  const duplicateEmailCount = normalizedEmployees.length - rowsToCreate.length;
+  let skippedDueToPlanLimit = 0;
+
+  if (seats.max != null && rowsToCreate.length > seats.remaining) {
+    skippedDueToPlanLimit = rowsToCreate.length - seats.remaining;
+    rowsToCreate = rowsToCreate.slice(0, seats.remaining);
+  }
+
+  if (rowsToCreate.length === 0 && skippedDueToPlanLimit > 0) {
+    return res.status(403).json({
+      success: false,
+      message: planLimitMessage(plan, 'users') || 'User limit reached for your plan',
+      data: {
+        createdCount: 0,
+        duplicateCount: normalizedEmployees.length,
+        skippedDueToPlanLimit,
+      },
+    });
   }
 
   const BATCH = 25;
@@ -163,7 +210,10 @@ export const importEmployees = asyncHandler(async (req, res) => {
     success: true,
     data: {
       createdCount: rowsToCreate.length,
-      duplicateCount: normalizedEmployees.length - rowsToCreate.length,
+      duplicateCount: duplicateEmailCount,
+      skippedDueToPlanLimit,
+      seatsUsed: seats.current + rowsToCreate.length,
+      seatsMax: seats.max,
     },
   });
 });

@@ -1,133 +1,293 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { buildAdvisorState } from '../utils/enterpriseAdvisorEngine';
+import { useToast } from '../context/ToastContext';
 
-function formatLabel(value) {
-  return value?.replace(/_/g, ' ') || 'Unknown';
+const STORAGE_KEY = 'crm-advisor-steps';
+
+function loadCompleted() {
+  try {
+    return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveCompleted(map) {
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+}
+
+function severityClass(s) {
+  if (s === 'critical') return 'advisor-mission--critical';
+  if (s === 'warn') return 'advisor-mission--warn';
+  if (s === 'good') return 'advisor-mission--good';
+  return 'advisor-mission--info';
+}
+
+function HealthRing({ score, label }) {
+  const r = 52;
+  const c = 2 * Math.PI * r;
+  const offset = c - (score / 100) * c;
+  const color = score >= 75 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="advisor-ring" aria-label={`Health score ${score}, ${label}`}>
+      <svg viewBox="0 0 120 120" className="advisor-ring-svg">
+        <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="10" />
+        <circle
+          cx="60"
+          cy="60"
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          transform="rotate(-90 60 60)"
+          className="advisor-ring-progress"
+        />
+      </svg>
+      <div className="advisor-ring-center">
+        <span className="advisor-ring-score">{score}</span>
+        <span className="advisor-ring-label">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+function Sparkline({ trend }) {
+  if (!trend?.length) return null;
+  const max = Math.max(...trend.map((d) => d.count), 1);
+  const w = 120;
+  const h = 36;
+  const points = trend
+    .map((d, i) => {
+      const x = (i / (trend.length - 1 || 1)) * w;
+      const y = h - (d.count / max) * (h - 4);
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="advisor-spark" aria-hidden="true">
+      <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export default function EnterpriseAIAdvisor({ data = {}, followUps = [], employees = [] }) {
-  const analysis = useMemo(() => {
-    const now = new Date();
-    const activeEmployees = employees.filter((item) => item.status === 'ACTIVE').length;
-    const pendingFollowUps = followUps.filter((item) => !item.isCompleted && new Date(item.scheduledAt) >= now).length;
-    const missedFollowUps = followUps.filter((item) => !item.isCompleted && new Date(item.scheduledAt) < now).length;
-    const sourceBreakdown = [...(data.sourceBreakdown || [])].sort((a, b) => b.count - a.count);
-    const topSource = sourceBreakdown[0];
-    const answeredCalls = Number(data.answeredCalls || 0);
-    const missedCalls = Number(data.missedCalls || 0);
-    const conversionRate = Number(data.conversionRate || 0);
+  const navigate = useNavigate();
+  const toast = useToast();
+  const state = useMemo(
+    () => buildAdvisorState({ data, followUps, employees }),
+    [data, followUps, employees]
+  );
 
-    const recommendations = [];
+  const [activeMissionId, setActiveMissionId] = useState(() => state.missions[0]?.id);
+  const [completedSteps, setCompletedSteps] = useState(loadCompleted);
+  const [simOpen, setSimOpen] = useState(false);
 
-    if (missedFollowUps > 0) {
-      recommendations.push({
-        title: 'Overdue follow-ups detected',
-        detail: `${missedFollowUps} follow-up${missedFollowUps > 1 ? 's are' : ' is'} overdue. Prioritize the quickest-win leads first to recover conversion.`,
-      });
+  useEffect(() => {
+    if (!state.missions.some((m) => m.id === activeMissionId)) {
+      setActiveMissionId(state.missions[0]?.id);
     }
+  }, [state.missions, activeMissionId]);
 
-    if (conversionRate < 35) {
-      recommendations.push({
-        title: 'Conversion is below target',
-        detail: `Your conversion rate is ${conversionRate.toFixed(1)}%. Review first-touch messaging, lead routing, and follow-up timing for the hottest leads.`,
-      });
+  const activeMission =
+    state.missions.find((m) => m.id === activeMissionId) || state.missions[0];
+
+  const toggleStep = useCallback((missionId, stepId) => {
+    setCompletedSteps((prev) => {
+      const key = `${missionId}:${stepId}`;
+      const next = { ...prev, [key]: !prev[key] };
+      saveCompleted(next);
+      return next;
+    });
+  }, []);
+
+  const runStep = useCallback(
+    async (step) => {
+      if (step.action === 'navigate' && step.to) {
+        navigate(step.to);
+        return;
+      }
+      if (step.action === 'copy' && step.text) {
+        try {
+          await navigator.clipboard.writeText(step.text);
+          toast.success('Copied to clipboard');
+        } catch {
+          toast.error('Could not copy');
+        }
+        return;
+      }
+      if (step.action === 'hint') {
+        toast.success(step.text);
+      }
+    },
+    [navigate, toast]
+  );
+
+  const exportDiagnostic = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(state.diagnosticExport, null, 2));
+      toast.success('Diagnostic JSON copied');
+    } catch {
+      toast.error('Export failed');
     }
+  };
 
-    if (missedCalls > answeredCalls) {
-      recommendations.push({
-        title: 'Call handling needs attention',
-        detail: 'Missed calls are higher than answered calls. Route the busiest leads to the strongest reps and review callback workflows.',
-      });
-    }
-
-    if (topSource?.source) {
-      recommendations.push({
-        title: 'Best-performing acquisition channel',
-        detail: `${formatLabel(topSource.source)} is generating the most leads right now. Increase budget or test similar creatives there first.`,
-      });
-    }
-
-    if (pendingFollowUps > 0 && missedFollowUps === 0) {
-      recommendations.push({
-        title: 'Follow-up queue is healthy',
-        detail: `${pendingFollowUps} upcoming follow-up${pendingFollowUps > 1 ? 's are' : ' is'} scheduled. Keep the momentum going and auto-review any lead older than 24 hours.`,
-      });
-    }
-
-    if (!recommendations.length) {
-      recommendations.push({
-        title: 'Your CRM is healthy',
-        detail: 'No urgent issues are detected right now. Keep monitoring campaign quality and consistency in your follow-up cadence.',
-      });
-    }
-
-    return {
-      activeEmployees,
-      missedFollowUps,
-      pendingFollowUps,
-      recommendations,
-      topSource,
-      conversionRate,
-      answeredCalls,
-      missedCalls,
-    };
-  }, [data, followUps, employees]);
+  const runAllNavigateSteps = () => {
+    const nav = activeMission?.steps?.find((s) => s.action === 'navigate');
+    if (nav?.to) navigate(nav.to);
+    else toast.error('No navigation step for this mission');
+  };
 
   return (
-    <div className="card mt-6">
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+    <section className="advisor" aria-label="Enterprise command advisor">
+      <header className="advisor-head">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-primary-500 font-semibold">Enterprise AI Advisor</p>
-          <h2 className="text-xl font-bold text-main mt-2">Smart diagnostics for your growth engine</h2>
-          <p className="text-sm text-muted mt-1">
-            Built for Enterprise customers to turn your CRM signals into clear action steps.
+          <p className="advisor-kicker">Enterprise · Command layer</p>
+          <h2 className="advisor-title">Pipeline command center</h2>
+          <p className="advisor-sub">
+            Live signals from your workspace — every tile and mission runs a real action in the CRM.
           </p>
         </div>
-        <div className="rounded-full px-3 py-1 text-xs font-semibold bg-primary-500/10 text-primary-500">
-          AI-assisted insight
-        </div>
-      </div>
+        <button type="button" className="advisor-export-btn" onClick={exportDiagnostic}>
+          Export diagnostic
+        </button>
+      </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--surface-hover)' }}>
-          <p className="text-xs text-muted">Active employees</p>
-          <p className="text-2xl font-bold text-main mt-2">{analysis.activeEmployees}</p>
-        </div>
-        <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--surface-hover)' }}>
-          <p className="text-xs text-muted">Pending follow-ups</p>
-          <p className="text-2xl font-bold text-main mt-2">{analysis.pendingFollowUps}</p>
-        </div>
-        <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--surface-hover)' }}>
-          <p className="text-xs text-muted">Missed follow-ups</p>
-          <p className="text-2xl font-bold text-red-400 mt-2">{analysis.missedFollowUps}</p>
-        </div>
-        <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--surface-hover)' }}>
-          <p className="text-xs text-muted">Conversion rate</p>
-          <p className="text-2xl font-bold text-emerald-400 mt-2">{analysis.conversionRate.toFixed(1)}%</p>
-        </div>
-      </div>
-
-      <div className="grid gap-3">
-        {analysis.recommendations.map((item, index) => (
-          <div key={item.title} className="rounded-xl border border-default p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-sm font-bold">
-                {index + 1}
-              </span>
-              <h3 className="font-semibold text-main">{item.title}</h3>
-            </div>
-            <p className="text-sm text-muted leading-6">{item.detail}</p>
+      <div className="advisor-pulse-row">
+        <HealthRing score={state.healthScore} label={state.healthLabel} />
+        <div className="advisor-pulse-meta">
+          <div className="advisor-pulse-top">
+            <span className="advisor-pulse-title">7-day intake pulse</span>
+            <span className="advisor-pulse-total">{state.trendTotal} leads</span>
           </div>
+          <Sparkline trend={state.trend} />
+          {state.projectedLift > 0 && (
+            <button
+              type="button"
+              className="advisor-sim-btn"
+              onClick={() => setSimOpen((o) => !o)}
+            >
+              {simOpen ? 'Hide' : 'Show'} recovery simulator
+            </button>
+          )}
+          {simOpen && state.projectedLift > 0 && (
+            <div className="advisor-sim-panel">
+              <p>
+                If you clear <strong>{state.missedFollowUps.length}</strong> overdue follow-ups and
+                re-engage top NEW leads, model estimates up to{' '}
+                <strong>+{state.projectedLift}%</strong> conversion lift over the next cycle.
+              </p>
+              <button
+                type="button"
+                className="advisor-sim-go"
+                onClick={() => navigate('/follow-ups?type=missed')}
+              >
+                Start recovery queue →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="advisor-signals" role="list">
+        {state.signals.map((sig) => (
+          <button
+            key={sig.id}
+            type="button"
+            role="listitem"
+            className={`advisor-signal advisor-signal--${sig.tone} ${sig.action ? 'advisor-signal--click' : ''}`}
+            disabled={!sig.action}
+            onClick={() => sig.action && navigate(sig.action)}
+          >
+            <span className="advisor-signal-label">{sig.label}</span>
+            <span className="advisor-signal-value">
+              {sig.value}
+              {sig.unit && <small>{sig.unit}</small>}
+            </span>
+          </button>
         ))}
       </div>
 
-      {analysis.topSource?.source && (
-        <div className="mt-4 rounded-xl p-4" style={{ backgroundColor: 'var(--surface-hover)' }}>
-          <p className="text-xs text-muted">Top source signal</p>
-          <p className="text-sm font-semibold text-main mt-1">
-            {formatLabel(analysis.topSource.source)} is your strongest lead source with {analysis.topSource.count} lead{analysis.topSource.count > 1 ? 's' : ''}.
-          </p>
+      <div className="advisor-missions-head">
+        <h3 className="advisor-missions-title">Active missions</h3>
+        <p className="advisor-missions-sub">Select a mission — steps below execute inside your CRM</p>
+      </div>
+
+      <div className="advisor-mission-tabs" role="tablist">
+        {state.missions.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            role="tab"
+            aria-selected={activeMission?.id === m.id}
+            className={`advisor-mission-tab ${severityClass(m.severity)} ${
+              activeMission?.id === m.id ? 'advisor-mission-tab--on' : ''
+            }`}
+            onClick={() => setActiveMissionId(m.id)}
+          >
+            <span className="advisor-mission-tab-title">{m.title}</span>
+          </button>
+        ))}
+      </div>
+
+      {activeMission && (
+        <div className={`advisor-console ${severityClass(activeMission.severity)}`}>
+          <div className="advisor-console-main">
+            <p className="advisor-console-summary">{activeMission.summary}</p>
+            <p className="advisor-console-impact">{activeMission.impact}</p>
+
+            <ol className="advisor-steps">
+              {activeMission.steps.map((step) => {
+                const done = completedSteps[`${activeMission.id}:${step.id}`];
+                return (
+                  <li key={step.id} className={done ? 'advisor-step--done' : ''}>
+                    <label className="advisor-step-check">
+                      <input
+                        type="checkbox"
+                        checked={!!done}
+                        onChange={() => toggleStep(activeMission.id, step.id)}
+                      />
+                      <span>{step.label}</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="advisor-step-run"
+                      onClick={() => runStep(step)}
+                    >
+                      {step.action === 'navigate' ? 'Go' : step.action === 'copy' ? 'Copy' : 'Tip'}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+
+            <button type="button" className="advisor-console-primary" onClick={runAllNavigateSteps}>
+              Run primary action
+            </button>
+          </div>
+
+          {activeMission.preview?.length > 0 && (
+            <aside className="advisor-queue">
+              <p className="advisor-queue-title">Overdue queue (tap to open)</p>
+              <ul>
+                {activeMission.preview.map((item) => (
+                  <li key={item.id}>
+                    <button type="button" className="advisor-queue-item" onClick={() => navigate(item.to)}>
+                      <span className="advisor-queue-name">{item.label}</span>
+                      <span className="advisor-queue-sub">{item.sub}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          )}
         </div>
       )}
-    </div>
+    </section>
   );
 }

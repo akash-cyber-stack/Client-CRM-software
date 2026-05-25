@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi, billingApi } from '../api';
-import ThemeToggle from '../components/ThemeToggle';
 import AuthMarketingPanel from '../components/auth/AuthMarketingPanel';
-import AuthLogo from '../components/auth/AuthLogo';
+import AuthFormPanel from '../components/auth/AuthFormPanel';
 import AuthFlowTabs from '../components/auth/AuthFlowTabs';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import PlanSelector from '../components/billing/PlanSelector';
@@ -86,11 +85,12 @@ export default function Login() {
         role: isCreatingWorkspace ? undefined : role,
         companyName: companyName || undefined,
         plan: isCreatingWorkspace ? selectedPlan : undefined,
+        createWorkspace: isCreatingWorkspace,
       };
       const res = await authApi.register(payload);
       const data = res.data.data;
 
-      if (data.needsPayment) {
+      if (data?.needsPayment) {
         setPaymentSession({
           paymentToken: data.paymentToken,
           planDetails: data.planDetails,
@@ -102,7 +102,16 @@ export default function Login() {
       await setSessionFromToken(data.token);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const data = err.response?.data;
+      if (data?.code === 'PAYMENT_REQUIRED' && data?.data?.paymentToken) {
+        setPaymentSession({
+          paymentToken: data.data.paymentToken,
+          planDetails: data.data.planDetails,
+        });
+        setError('');
+        return;
+      }
+      setError(data?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -122,23 +131,20 @@ export default function Login() {
   if (paymentSession) {
     return (
       <div className="auth-page min-h-screen min-h-[100dvh] flex flex-col lg:flex-row">
-        <section className="auth-form-panel flex-1 flex flex-col">
-          <header className="auth-form-header">
-            <AuthLogo size="lg" />
-            <ThemeToggle />
-          </header>
-          <div className="auth-form-body flex-1 flex items-center justify-center px-4 py-8">
-            <div className="auth-form-card w-full max-w-[480px]">
-              <PaymentStep
-                paymentToken={paymentSession.paymentToken}
-                planDetails={paymentSession.planDetails}
-                onSuccess={onPaymentSuccess}
-                onError={setError}
-              />
-              {error && <div className="auth-form-error mt-4">{error}</div>}
-            </div>
+        <AuthFormPanel showBrandText={false}>
+          <div className="auth-form-card">
+            <p className="auth-form-kicker">Checkout</p>
+            <h1 className="auth-form-title">Complete your plan</h1>
+            <p className="auth-form-subtitle">One step to unlock your workspace.</p>
+            <PaymentStep
+              paymentToken={paymentSession.paymentToken}
+              planDetails={paymentSession.planDetails}
+              onSuccess={onPaymentSuccess}
+              onError={setError}
+            />
+            {error && <div className="auth-form-error mt-4">{error}</div>}
           </div>
-        </section>
+        </AuthFormPanel>
         <AuthMarketingPanel onGetStarted={() => setMode('register')} />
       </div>
     );
@@ -146,23 +152,14 @@ export default function Login() {
 
   return (
     <div className="auth-page min-h-screen min-h-[100dvh] flex flex-col lg:flex-row">
-      <section className="auth-form-panel flex-1 flex flex-col">
-        <header className="auth-form-header">
-          <div className="auth-form-brand">
-            <AuthLogo size="lg" />
-            <div className="auth-form-brand-text">
-              <p className="auth-form-brand-name">Sales Lead CRM</p>
-              <p className="auth-form-brand-tag">Choose a plan · Pay · Start selling</p>
-            </div>
-          </div>
-          <ThemeToggle />
-        </header>
-
-        <div className="auth-form-body flex-1 flex items-start lg:items-center justify-center px-4 sm:px-8 py-6 pb-10">
-          <div className="auth-form-card w-full max-w-[520px]">
+      <AuthFormPanel>
+        <div className="auth-form-card">
             <AuthFlowTabs mode={mode} onChange={(m) => { setMode(m); setError(''); }} />
 
-            <h1 className="auth-form-title mt-6">
+            <p className="auth-form-kicker mt-6">
+              {mode === 'signin' ? 'Workspace access' : 'New workspace'}
+            </p>
+            <h1 className="auth-form-title">
               {mode === 'signin' ? 'Welcome back' : 'Create your account'}
             </h1>
             <p className="auth-form-subtitle">
@@ -316,9 +313,8 @@ export default function Login() {
                 </button>
               </form>
             )}
-          </div>
         </div>
-      </section>
+      </AuthFormPanel>
 
       <AuthMarketingPanel onGetStarted={() => setMode('register')} />
     </div>

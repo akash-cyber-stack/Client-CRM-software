@@ -1,4 +1,5 @@
 import AuthBrandArt from './AuthBrandArt';
+import BrandLogo from '../BrandLogo';
 import { IconArrowRight } from './AuthIcons';
 
 const CAPABILITIES = [
@@ -26,7 +27,8 @@ export default function AuthMarketingPanel({ onGetStarted }) {
       <div className="auth-brand-vignette" />
 
       <div className="auth-brand-inner">
-        <header className="auth-brand-header">
+        <header className="auth-brand-header flex flex-col gap-4">
+          <BrandLogo size="lg" />
           <span className="auth-brand-tag">Sales CRM · Plans from ₹1,299/mo</span>
         </header>
 

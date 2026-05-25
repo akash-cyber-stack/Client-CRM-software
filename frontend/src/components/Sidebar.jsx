@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLayout } from '../context/LayoutContext';
 import { canAccessFeature } from '../utils/planAccess';
+import BrandLogo from './BrandLogo';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊', feature: 'dashboard' },
@@ -41,10 +42,8 @@ export default function Sidebar() {
       >
         <div className="p-4 sm:p-5 border-b border-default flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-primary-600 flex items-center justify-center text-white font-bold shadow-lg shadow-primary-600/30">
-              SL
-            </div>
-            <div className="min-w-0">
+            <BrandLogo size="sm" className="shrink-0" />
+            <div className="min-w-0 flex-1">
               <h1 className="text-base font-bold text-main truncate">Sales Lead CRM</h1>
               <p className="text-xs text-muted truncate">Lead & Call Management</p>
             </div>

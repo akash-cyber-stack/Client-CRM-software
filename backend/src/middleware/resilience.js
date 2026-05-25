@@ -53,6 +53,10 @@ export function rateLimitByIp(req, res, next) {
 
 /** Vercel max 30s — respond before platform kills the function */
 export function requestTimeout(req, res, next) {
+  const isDev = process.env.NODE_ENV !== 'production';
+  const limit =
+    isDev && req.path.startsWith('/auth') ? 90_000 : REQUEST_TIMEOUT_MS;
+
   const timer = setTimeout(() => {
     if (!res.headersSent) {
       res.status(503).json({
@@ -61,7 +65,7 @@ export function requestTimeout(req, res, next) {
         code: 'TIMEOUT',
       });
     }
-  }, REQUEST_TIMEOUT_MS);
+  }, limit);
 
   const end = res.end.bind(res);
   res.end = (...args) => {

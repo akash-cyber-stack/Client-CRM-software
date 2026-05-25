@@ -149,7 +149,7 @@ model User {
 model Lead {
   id               String     @id @default(uuid())
   companyId        String     @map("company_id")
-  leadNumber       Int        @default(autoincrement()) @map("lead_number")
+  leadNumber       Int        @map("lead_number")
   customerName     String     @map("customer_name")
   phone            String
   email            String?

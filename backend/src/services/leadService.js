@@ -3,6 +3,9 @@ import { normalizePhone, isValidPhone } from '../utils/phone.js';
 import { logActivity } from './leadActivityService.js';
 import { autoAssignLead } from './assignmentService.js';
 import { withCompany } from '../utils/tenant.js';
+import { getNextLeadNumber } from './leadNumberService.js';
+import { checkLeadCapacity, getCompanyPlan } from './planEnforcementService.js';
+import { planLimitMessage } from '../constants/planLimits.js';
 
 export async function findLeadByPhoneOrEmail(companyId, phone, email) {
   const normalized = normalizePhone(phone);
@@ -66,9 +69,20 @@ export async function upsertLeadFromWebhook({
     campaignId = campaign.id;
   }
 
+  const plan = await getCompanyPlan(companyId);
+  const leadCap = await checkLeadCapacity(companyId, plan, 1);
+  if (!leadCap.ok) {
+    throw Object.assign(new Error(planLimitMessage(plan, 'leads') || 'Lead limit reached'), {
+      statusCode: 403,
+    });
+  }
+
+  const leadNumber = await getNextLeadNumber(companyId);
+
   const lead = await prisma.lead.create({
     data: {
       companyId,
+      leadNumber,
       customerName: customerName || 'Unknown',
       phone,
       email,

@@ -18,6 +18,7 @@ import {
 import { reportsApi, followUpsApi, employeesApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import EnterpriseAIAdvisor from '../components/EnterpriseAIAdvisor';
+import DashboardActionDock from '../components/DashboardActionDock';
 import StatCard from '../components/StatCard';
 import EmployeePerformanceChart from '../components/EmployeePerformanceChart';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -323,25 +324,7 @@ export default function Dashboard() {
         <EnterpriseAIAdvisor data={data} followUps={followUps} employees={employees} />
       )}
 
-      <div className="dashboard-actions mt-6 sm:mt-8 flex flex-col xs:flex-row flex-wrap gap-3">
-        <Link to="/leads" className="btn-primary text-center flex-1 sm:flex-none min-h-[44px] flex items-center justify-center">
-          View all leads
-        </Link>
-        <Link
-          to="/follow-ups?type=today"
-          className="btn-secondary text-center flex-1 sm:flex-none min-h-[44px] flex items-center justify-center"
-        >
-          Today&apos;s follow-ups
-        </Link>
-        {isAdmin && (
-          <Link
-            to="/reports"
-            className="btn-secondary text-center flex-1 sm:flex-none min-h-[44px] flex items-center justify-center"
-          >
-            Full reports
-          </Link>
-        )}
-      </div>
+      <DashboardActionDock data={data} isAdmin={isAdmin} />
     </div>
   );
 }
