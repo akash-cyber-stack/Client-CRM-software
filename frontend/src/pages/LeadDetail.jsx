@@ -25,8 +25,12 @@ export default function LeadDetail() {
 
   useEffect(() => {
     load();
-    if (isAdmin) employeesApi.list().then((res) => setEmployees(res.data.data));
+    if (isAdmin) employeesApi.list().then((res) => setEmployees(res.data.data)).catch(() => {});
   }, [id, isAdmin]);
+
+  useEffect(() => {
+    if (lead?.assignedToId) setAssignId(lead.assignedToId);
+  }, [lead?.assignedToId]);
 
   const handleNote = async () => {
     if (!note.trim()) return;

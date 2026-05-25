@@ -38,8 +38,12 @@ export const leadsApi = {
   bulkImport: (data) => client.post('/leads/bulk-import', data),
   update: (id, data) => client.put(`/leads/${id}`, data),
   remove: (id) => client.delete(`/leads/${id}`),
-  assign: (id, data) => client.post(`/leads/${id}/assign`, data),
-  addNote: (id, data) => client.post(`/leads/${id}/notes`, data),
+  assign: (id, employeeId) =>
+    client.post(`/leads/${id}/assign`, { employeeId }),
+  addNote: (id, content) =>
+    client.post(`/leads/${id}/notes`, { content }),
+  addFollowUp: (id, data) => client.post(`/leads/${id}/follow-up`, data),
+  bulkDelete: (ids) => client.post('/leads/bulk-delete', { ids }),
   activities: (id) => client.get(`/leads/${id}/activities`),
 };
 

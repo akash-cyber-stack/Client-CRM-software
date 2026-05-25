@@ -43,7 +43,7 @@ export default function Leads() {
     setListError('');
     try {
       const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
-      const res = await leadsApi.list({ ...params, limit: 'all', page: 1 });
+      const res = await leadsApi.list({ ...params, limit: 5000, page: 1 });
       const nextLeads = Array.isArray(res.data.data) ? res.data.data : [];
       setLeads(nextLeads);
       setTotalCount(res.data.pagination?.total ?? nextLeads.length ?? 0);
@@ -159,9 +159,14 @@ export default function Leads() {
     if (!confirm(`Delete ${ids.length} selected lead(s)? This cannot be undone.`)) return;
     setDeleting(true);
     try {
-      const res = await leadsApi.bulkDelete(ids);
-      const count = res.data.data?.deletedCount ?? ids.length;
-      toast.success(`Deleted ${count} lead(s)`);
+      const CHUNK = 100;
+      let deletedTotal = 0;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const chunk = ids.slice(i, i + CHUNK);
+        const res = await leadsApi.bulkDelete(chunk);
+        deletedTotal += res.data.data?.deletedCount ?? chunk.length;
+      }
+      toast.success(`Deleted ${deletedTotal} lead(s)`);
       await load();
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Bulk delete failed'));

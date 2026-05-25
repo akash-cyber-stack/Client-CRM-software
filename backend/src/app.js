@@ -32,6 +32,17 @@ app.use(
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid request body. Use JSON object format.',
+      code: 'INVALID_JSON',
+    });
+  }
+  return next(err);
+});
+
 /** Backend only — open the frontend URL in the browser for the CRM UI */
 app.get('/', (_req, res) => {
   res.json({

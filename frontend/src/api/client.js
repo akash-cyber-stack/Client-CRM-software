@@ -24,8 +24,9 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-const RETRY_STATUSES = new Set([503, 429]);
-const RETRY_METHODS = new Set(['get', 'head']);
+const RETRY_STATUSES = new Set([503, 429, 502, 504]);
+const RETRY_METHODS = new Set(['get', 'head', 'post', 'put', 'patch', 'delete']);
+const RETRY_SKIP_PATHS = ['/auth/login', '/auth/register'];
 
 client.interceptors.response.use(
   (res) => res,
@@ -34,12 +35,15 @@ client.interceptors.response.use(
     const status = err.response?.status;
     const method = (config?.method || 'get').toLowerCase();
 
-    if (
+    const path = config?.url || '';
+    const canRetry =
       config &&
       !config.__retry &&
       RETRY_STATUSES.has(status) &&
-      RETRY_METHODS.has(method)
-    ) {
+      RETRY_METHODS.has(method) &&
+      !RETRY_SKIP_PATHS.some((p) => path.includes(p));
+
+    if (canRetry) {
       config.__retry = true;
       await new Promise((r) => setTimeout(r, 800));
       return client.request(config);
