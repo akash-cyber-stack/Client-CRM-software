@@ -1,117 +1,58 @@
-# Sales Lead CRM
+# Client CRM Software
 
-A production-ready CRM platform for lead management, sales employee call tracking, IVR call recording integration, and Google Ads + Meta Ads lead capture.
+Client CRM Software is a full-stack CRM platform built for lead management, sales team tracking, call history management, IVR call recording integration, and campaign-based lead handling.
 
-Sales Lead CRM helps sales teams manage leads, assign leads to employees, track call activity, store IVR call recordings, manage follow-ups, and monitor campaign performance from one centralized dashboard.
-
----
+This project is designed for businesses that manage large volumes of leads from multiple sources and need a structured system to assign, track, follow up, and convert leads efficiently.
 
 ## Live Demo
 
-**Application URL:**  
-## Local URLs (important)
+https://sales-crm-ipi.vercel.app/login
 
-| What | URL |
-|------|-----|
-| **Frontend (CRM UI)** | http://localhost:5173 |
-| **Backend API only** | http://localhost:5000 — `/api/health`, not the dashboard |
+## Features
 
-Run both: `npm run dev` from project root.
-
-## Live (Vercel)
-
-| URL | Notes |
-|-----|--------|
-| **https://ar-crm-iota-pi.vercel.app** | **Primary** — project **ar-crm-iota** (latest deploy) |
-| https://ar-crm-iota.vercel.app | Legacy domain — redirects to pi after **ar-crm** redeploy; see [VERCEL-DOMAIN-MIGRATION.md](./VERCEL-DOMAIN-MIGRATION.md) |
-
-**Login:** https://ar-crm-iota-pi.vercel.app/login
-
----
+- Secure authentication
+- Role-based access control
+- Super Admin, Manager, and Sales Employee roles
+- Lead management dashboard
+- Manual lead creation
+- Bulk lead import using CSV/Excel
+- Assign imported leads to sales employees
+- Round-robin lead assignment
+- Employee management
+- IVR call log integration
+- Call recording URL storage
+- Employee-wise call history
+- Follow-up tracking
+- Lead status management
+- Dashboard analytics
+- Reports and CSV export
+- Google Ads lead integration
+- Meta Ads lead integration
+- Responsive user interface
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite, Tailwind CSS, React Router, Recharts |
+| Frontend | React, Vite, Tailwind CSS |
 | Backend | Node.js, Express.js |
 | Database | PostgreSQL |
 | ORM | Prisma |
-| Authentication | JWT, bcrypt |
+| Authentication | JWT |
 | Deployment | Vercel |
-| Cloud Database | Neon PostgreSQL |
-
----
-
-## Key Features
-
-- Role-based authentication
-  - Super Admin
-  - Manager
-  - Sales Employee
-
-- Employee management
-  - Add, edit, delete employees
-  - Activate/deactivate employees
-  - Assign employee roles
-  - Store IVR Agent ID
-  - Store IVR extension/mobile number
-
-- Lead management
-  - **Add Lead Manually** (Super Admin / Manager)
-  - **Import Leads** from Excel (.xlsx) or CSV — preview, validation, bulk assign or round-robin
-  - Download sample import template from Leads page
-  - Sales Employee cannot create or import leads (403 on API)
-  - Google Ads lead capture
-  - Meta/Facebook/Instagram lead capture
-  - Lead search and filters
-  - Lead status tracking
-  - Lead notes and remarks
-  - Follow-up date management
-  - Duplicate lead detection
-  - Round-robin lead assignment
-
-- IVR call tracking
-  - Employee-wise call logs
-  - Incoming/outgoing/missed call records
-  - Call duration tracking
-  - Call status tracking
-  - IVR Agent ID mapping
-  - Customer phone number matching
-  - Call recording URL storage
-  - Recording audio player
-
-- Follow-up system
-  - Today follow-ups
-  - Pending follow-ups
-  - Missed follow-ups
-  - Employee-wise follow-up tracking
-
-- Dashboard and reports
-  - Admin dashboard
-  - Sales employee dashboard
-  - Source-wise lead reports
-  - Employee-wise call reports
-  - Campaign-wise reports
-  - Conversion reports
-  - CSV export support
-
-- Webhook integrations
-  - Google Ads lead webhook
-  - Meta Ads lead webhook
-  - IVR call completed webhook
-
----
+| Database Hosting | Neon PostgreSQL |
 
 ## Project Structure
 
 ```text
-CRM/
-├── backend/              # Express API, Prisma schema, routes, controllers
-├── frontend/             # React frontend application
-├── samples/              # Sample webhook payloads
-├── scripts/              # Utility scripts
-├── DEPLOY.md             # Deployment guide
-├── README.md             # Project documentation
-├── vercel.json           # Vercel deployment configuration
-└── package.json
+Client-CRM-software/
+├── api/
+├── backend/
+├── frontend/
+├── samples/
+├── scripts/
+├── README.md
+├── LICENSE
+├── package.json
+├── vercel.json
+└── DEPLOY.md
