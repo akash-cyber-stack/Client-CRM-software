@@ -4,6 +4,7 @@ import {
   plans,
   subscription,
   checkout,
+  checkoutPublic,
   confirmPayment,
   activatePlan,
 } from '../controllers/billingController.js';
@@ -14,6 +15,7 @@ router.get('/plans', plans);
 router.post('/confirm-payment', confirmPayment);
 router.get('/subscription', authenticate, subscription);
 router.post('/checkout', authenticate, authorize('SUPER_ADMIN'), checkout);
+router.post('/checkout/public', checkoutPublic);
 router.post('/activate', authenticate, authorize('SUPER_ADMIN'), activatePlan);
 
 export default router;

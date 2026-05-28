@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { employeesApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -8,7 +8,13 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ImportEmployeesModal from '../components/ImportEmployeesModal';
 import { getApiErrorMessage } from '../utils/apiError';
 import { ROLES, PERFORMANCE_ROLES } from '../utils/constants';
-import { getPlanLimits, planUserLimitLabel, remainingUserSlots } from '../utils/planLimits';
+import {
+  getPlanLimits,
+  planUserLimitLabel,
+  planManagerLimitLabel,
+  remainingUserSlots,
+  remainingManagerSlots,
+} from '../utils/planLimits';
 
 const emptyForm = {
   name: '', email: '', phone: '', password: '', role: 'SALES_EMPLOYEE',
@@ -17,6 +23,7 @@ const emptyForm = {
 
 export default function Employees() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const [employees, setEmployees] = useState([]);
   const [seats, setSeats] = useState(null);
@@ -99,8 +106,12 @@ export default function Employees() {
   const seatsUsed = seats?.used ?? employees.length;
   const seatsMax = seats?.max ?? planLimits.maxUsers;
   const slotsLeft = seats?.remaining ?? remainingUserSlots(user?.plan, seatsUsed);
+  const managersUsed = employees.filter((e) => e.role === 'MANAGER').length;
+  const managersMax = planLimits.maxManagers;
+  const managersRemaining = remainingManagerSlots(user?.plan, managersUsed);
   const atLimit = seatsMax != null && seatsUsed >= seatsMax;
   const limitMessage = planUserLimitLabel(user?.plan);
+  const managerLimitMessage = planManagerLimitLabel(user?.plan);
 
   return (
     <div className="page-enter">
@@ -142,6 +153,42 @@ export default function Employees() {
           )}
           {atLimit && seatsUsed <= seatsMax && limitMessage && (
             <p className="mt-1 text-amber-300/90">{limitMessage}</p>
+          )}
+          {(atLimit || seatsUsed > seatsMax) && (
+            <button
+              type="button"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/25"
+              onClick={() => navigate('/settings?focus=subscription')}
+            >
+              Upgrade plan now
+              <span aria-hidden>→</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {managersMax != null && (
+        <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${managersUsed > managersMax ? 'border-red-500/40 bg-red-500/10 text-red-200' : managersRemaining <= 0 ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-default bg-[var(--surface-hover)] text-muted'}`}>
+          <span className="font-semibold text-main tabular-nums">{managersUsed}</span>
+          <span> / {managersMax} managers</span>
+          {managersUsed > managersMax && (
+            <p className="mt-1 text-red-300/90">Over manager limit by {managersUsed - managersMax}. Remove managers or upgrade plan.</p>
+          )}
+          {managersRemaining > 0 && managersUsed <= managersMax && (
+            <span className="block mt-1 text-muted">You can add {managersRemaining} more manager(s).</span>
+          )}
+          {managersRemaining <= 0 && managerLimitMessage && (
+            <p className="mt-1 text-amber-300/90">{managerLimitMessage}</p>
+          )}
+          {managersRemaining <= 0 && (
+            <button
+              type="button"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/25"
+              onClick={() => navigate('/settings?focus=subscription')}
+            >
+              Upgrade for more managers
+              <span aria-hidden>→</span>
+            </button>
           )}
         </div>
       )}

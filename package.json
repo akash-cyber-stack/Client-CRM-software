@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "kill-port 5000 5173 || exit 0",
     "postinstall": "npx prisma generate --schema=backend/prisma/schema.prisma",
     "vercel-install": "npm install && npm install --prefix frontend",
     "vercel-build": "npx prisma generate --schema=backend/prisma/schema.prisma && npm run build --prefix frontend",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "kill-port": "^2.0.1",
     "prisma": "^5.22.0"
   },
   "prisma": {

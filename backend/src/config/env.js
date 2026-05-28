@@ -74,6 +74,10 @@ export const env = {
   gstOtpExpiryMinutes: parseInt(cleanEnv(process.env.GST_OTP_EXPIRY_MINUTES, '10'), 10) || 10,
   gstOtpDevExpose: cleanEnv(process.env.GST_OTP_DEV_EXPOSE, 'true').toLowerCase() === 'true' &&
     cleanEnv(process.env.NODE_ENV, 'development') !== 'production',
+  stripeSecretKey: cleanEnv(process.env.STRIPE_SECRET_KEY, ''),
+  stripeWebhookSecret: cleanEnv(process.env.STRIPE_WEBHOOK_SECRET, ''),
+  razorpayKeyId: cleanEnv(process.env.RAZORPAY_KEY_ID, ''),
+  razorpayKeySecret: cleanEnv(process.env.RAZORPAY_KEY_SECRET, ''),
   smsHttpUrl: cleanEnv(process.env.SMS_HTTP_URL, ''),
   smsApiKey: cleanEnv(process.env.SMS_API_KEY, ''),
   fast2smsApiKey: cleanEnv(process.env.FAST2SMS_API_KEY, ''),

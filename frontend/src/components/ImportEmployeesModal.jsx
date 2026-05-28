@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import Modal from './Modal';
 import { parseEmployeesFromFile } from '../utils/parseEmployeesFile';
-import { employeesApi } from '../api';
+import { employeesApi, billingApi } from '../api';
 import { getApiErrorMessage } from '../utils/apiError';
 import { useToast } from '../context/ToastContext';
 import { remainingUserSlots } from '../utils/planLimits';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function ImportEmployeesModal({
   open,
@@ -21,7 +23,15 @@ export default function ImportEmployeesModal({
   const [validRows, setValidRows] = useState([]);
   const [invalidRows, setInvalidRows] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [previewReport, setPreviewReport] = useState(null);
   const [fileError, setFileError] = useState('');
+  const [upgradeInfo, setUpgradeInfo] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [activatingPlan, setActivatingPlan] = useState(false);
+  const [confirmPlan, setConfirmPlan] = useState(null);
+  const [managerCounts, setManagerCounts] = useState({ used: 0, max: null, remaining: null });
+  const [autoRetryAfterUpgrade, setAutoRetryAfterUpgrade] = useState(false);
 
   const slotsLeft = useMemo(() => {
     if (slotsLeftProp != null && Number.isFinite(slotsLeftProp)) return slotsLeftProp;
@@ -40,12 +50,50 @@ export default function ImportEmployeesModal({
     setInvalidRows([]);
     setSummary(null);
     setFileError('');
+    setUpgradeInfo(null);
   };
 
   const handleClose = () => {
     if (importing) return;
     reset();
     onClose();
+  };
+
+  const { isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { setSessionFromToken } = useAuth();
+
+  const openSubscription = () => {
+    navigate('/settings');
+  };
+
+  const loadPlans = async () => {
+    if (plans.length) return;
+    setLoadingPlans(true);
+    try {
+      const res = await billingApi.plans();
+      setPlans(res.data.data || []);
+    } catch (err) {
+      // ignore
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const loadManagerCounts = async () => {
+    try {
+      const res = await employeesApi.list();
+      const employees = res.data.data || [];
+      const used = employees.filter((e) => e.role === 'MANAGER').length;
+      // derive max from props if provided via seatsMax and plan
+      const max = seatsMax == null ? null : (() => {
+        // assume plan prop maps to seat limits; fallback to null
+        return null;
+      })();
+      setManagerCounts({ used, max, remaining: max == null ? Infinity : Math.max(0, max - used) });
+    } catch (err) {
+      // ignore
+    }
   };
 
   const onFileChange = async (e) => {
@@ -63,6 +111,25 @@ export default function ImportEmployeesModal({
       setInvalidRows(result.invalid);
       if (!result.valid.length && !result.invalid.length) {
         setFileError('No data rows found in file.');
+      }
+      // run server-side preview for validation (duplicates, manager/seat capacity)
+      if (result.valid.length) {
+        try {
+          const pv = await employeesApi.previewImport({ employees: result.valid });
+          setPreviewReport(pv.data.data || null);
+          // if preview indicates manager limit reached, surface upgrade
+          if (pv.data.data?.managers?.managerRemaining !== undefined && pv.data.data.managers.managerRemaining <= 0) {
+            setUpgradeInfo({ message: `Manager limit reached for ${plan}.` });
+          } else {
+            setUpgradeInfo(null);
+          }
+        } catch (err) {
+          // ignore preview errors but show toast
+          toast.error(getApiErrorMessage(err, 'Preview failed'));
+          setPreviewReport(null);
+        }
+      } else {
+        setPreviewReport(null);
       }
     } catch (err) {
       setFileError(err.message || 'Failed to parse file');
@@ -96,7 +163,15 @@ export default function ImportEmployeesModal({
       );
       onSuccess?.();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Import failed'));
+      const status = err.response?.status;
+      const data = err.response?.data;
+      const message = getApiErrorMessage(err, 'Import failed');
+      // detect plan/manager limit 403 and surface upgrade CTA
+      if (status === 403 && (String(data?.message || '').toLowerCase().includes('manager') || data?.data?.skippedDueToManagerLimit || data?.code === 'PAYMENT_REQUIRED')) {
+        setUpgradeInfo({ message: data?.message || message });
+      } else {
+        toast.error(message);
+      }
     } finally {
       setImporting(false);
     }
@@ -213,6 +288,49 @@ export default function ImportEmployeesModal({
               </div>
             )}
 
+            {upgradeInfo && (
+              <div className="rounded-lg p-3 border border-amber-500/30" style={{ backgroundColor: 'var(--surface-hover)' }}>
+                <p className="text-sm text-amber-400 font-semibold">{upgradeInfo.message}</p>
+                <p className="text-sm text-muted mt-2">Upgrade your plan to add more managers or seats.</p>
+                <div className="mt-3 flex gap-2">
+                  <button type="button" className="btn-primary" onClick={() => { loadPlans(); }}>
+                    {loadingPlans ? 'Loading plans…' : 'Choose plan & upgrade'}
+                  </button>
+                  {!isSuperAdmin && (
+                    <button type="button" className="btn-secondary" onClick={() => window.location.href = '/contact'}>Contact admin</button>
+                  )}
+                </div>
+
+                {isSuperAdmin && plans.length > 0 && (
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {plans.map((p) => (
+                      <div key={p.id} className="rounded-lg p-3 border" style={{ backgroundColor: 'white' }}>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-semibold">{p.name}</div>
+                            <div className="text-sm text-muted">{p.priceLabel || ''}</div>
+                          </div>
+                          <div>
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              disabled={activatingPlan}
+                              onClick={async () => {
+                                // show confirmation modal before activating
+                                setConfirmPlan(p);
+                              }}
+                            >
+                              {activatingPlan ? 'Upgrading…' : 'Upgrade'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <button
               type="button"
               className="btn-primary w-full"
@@ -245,6 +363,51 @@ export default function ImportEmployeesModal({
               Done
             </button>
           </div>
+        )}
+
+        {confirmPlan && (
+          <Modal open={!!confirmPlan} onClose={() => setConfirmPlan(null)} title={`Activate ${confirmPlan.name}?`} size="sm">
+            <p className="text-sm text-muted">Activate plan <strong>{confirmPlan.name}</strong> for this workspace? This will update your subscription immediately.</p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={activatingPlan}
+                onClick={async () => {
+                  setActivatingPlan(true);
+                  try {
+                    const res = await billingApi.checkout({ plan: confirmPlan.id });
+                    const data = res.data.data;
+                    if (data?.checkoutUrl) {
+                      window.location.href = data.checkoutUrl;
+                      return;
+                    }
+                    await billingApi.activate({ plan: confirmPlan.id, paymentId: `mock_${Date.now()}` });
+                    const token = localStorage.getItem('token');
+                    if (token) await setSessionFromToken(token);
+                    toast.success('Plan activated');
+                    setUpgradeInfo(null);
+                    setConfirmPlan(null);
+                    // reload manager counts and optionally auto-retry import
+                    await loadManagerCounts();
+                    onSuccess?.();
+                    if (autoRetryAfterUpgrade) await handleImport();
+                  } catch (err) {
+                    toast.error(getApiErrorMessage(err, 'Activation failed'));
+                  } finally {
+                    setActivatingPlan(false);
+                  }
+                }}
+              >
+                {activatingPlan ? 'Activating…' : `Activate ${confirmPlan.name}`}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setConfirmPlan(null)}>Cancel</button>
+            </div>
+            <label className="mt-3 text-sm text-muted flex items-center gap-2">
+              <input type="checkbox" checked={autoRetryAfterUpgrade} onChange={(e) => setAutoRetryAfterUpgrade(e.target.checked)} />
+              <span>Retry import automatically after successful upgrade</span>
+            </label>
+          </Modal>
         )}
       </div>
     </Modal>

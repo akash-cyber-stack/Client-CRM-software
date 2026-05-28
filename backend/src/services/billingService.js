@@ -1,5 +1,7 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
+import Razorpay from 'razorpay';
 import { env } from '../config/env.js';
 import { getPlan, PLANS } from '../constants/plans.js';
 
@@ -42,8 +44,26 @@ export async function activateSubscription(companyId, { plan, paymentId }) {
   return company;
 }
 
-/** Mock checkout — replace with Razorpay/Stripe order creation in production */
-export async function createCheckoutSession(companyId, plan) {
+function ensureRazorpayConfigured() {
+  if (!env.razorpayKeyId || !env.razorpayKeySecret) {
+    throw Object.assign(
+      new Error(
+        'Real payment gateway is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.'
+      ),
+      { statusCode: 503 }
+    );
+  }
+}
+
+function getRazorpayClient() {
+  ensureRazorpayConfigured();
+  return new Razorpay({
+    key_id: env.razorpayKeyId,
+    key_secret: env.razorpayKeySecret,
+  });
+}
+
+export async function createCheckoutSession({ companyId, plan, customer = {} }) {
   const planDef = getPlan(plan);
   if (!planDef) {
     throw Object.assign(new Error('Invalid plan'), { statusCode: 400 });
@@ -53,21 +73,51 @@ export async function createCheckoutSession(companyId, plan) {
   if (!company) {
     throw Object.assign(new Error('Company not found'), { statusCode: 404 });
   }
-
-  await prisma.company.update({
-    where: { id: companyId },
-    data: { plan },
+  const razorpay = getRazorpayClient();
+  const amount = Math.round(planDef.price * 100);
+  const order = await razorpay.orders.create({
+    amount,
+    currency: 'INR',
+    receipt: `crm_${companyId.slice(0, 8)}_${Date.now()}`,
+    notes: {
+      companyId: String(companyId),
+      plan: planDef.id,
+      companyName: company.name,
+    },
   });
 
   return {
-    orderId: `order_${companyId}_${Date.now()}`,
-    amount: planDef.price,
+    provider: 'razorpay',
+    keyId: env.razorpayKeyId,
+    orderId: order.id,
+    amount,
     currency: 'INR',
     plan: planDef.id,
     planName: planDef.name,
     companyId,
-    mockPayment: env.nodeEnv !== 'production',
+    description: `${planDef.name} plan subscription`,
+    name: 'Sales Lead CRM',
+    prefill: {
+      name: customer.name || '',
+      email: customer.email || company.contactEmail || '',
+      contact: customer.phone || company.contactPhone || '',
+    },
   };
+}
+
+export function verifyRazorpayPayment({ orderId, paymentId, signature }) {
+  ensureRazorpayConfigured();
+  if (!orderId || !paymentId || !signature) {
+    throw Object.assign(new Error('Missing payment verification fields'), { statusCode: 400 });
+  }
+  const payload = `${orderId}|${paymentId}`;
+  const expected = crypto
+    .createHmac('sha256', env.razorpayKeySecret)
+    .update(payload)
+    .digest('hex');
+  if (expected !== signature) {
+    throw Object.assign(new Error('Invalid payment signature'), { statusCode: 400 });
+  }
 }
 
 export async function getSubscription(companyId) {

@@ -15,7 +15,8 @@ export const billingApi = {
   confirmPayment: (data) => client.post('/billing/confirm-payment', data),
   activate: (data) => client.post('/billing/activate', data),
   subscription: () => client.get('/billing/subscription'),
-  checkout: (plan) => client.post('/billing/checkout', { plan }),
+  checkout: (data) => client.post('/billing/checkout', data),
+  checkoutPublic: (data) => client.post('/billing/checkout/public', data),
 };
 
 export const companiesApi = {
@@ -27,6 +28,7 @@ export const employeesApi = {
   list: (params) => client.get('/employees', { params }),
   create: (data) => client.post('/employees', data),
   import: (data) => client.post('/employees/import', data),
+  previewImport: (data) => client.post('/employees/import/preview', data),
   update: (id, data) => client.put(`/employees/${id}`, data),
   remove: (id) => client.delete(`/employees/${id}`),
 };

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { billingApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { openRazorpayCheckout } from '../../utils/razorpayCheckout';
 
 export default function SubscriptionCard() {
   const { user, isSuperAdmin, setSessionFromToken } = useAuth();
   const [sub, setSub] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [selectedPlanId, setSelectedPlanId] = useState('');
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
   const [message, setMessage] = useState('');
@@ -22,16 +24,19 @@ export default function SubscriptionCard() {
         if (!cancelled) {
           setSub(subRes.data.data);
           setPlans(plansRes.data.data || []);
+          setSelectedPlanId(subRes.data.data?.plan || '');
         }
       } catch (err) {
         if (!cancelled) {
           setError(err.response?.data?.message || 'Could not load subscription');
           if (user?.company) {
-            setSub({
+            const fallbackSub = {
               plan: user.company.plan,
               subscriptionStatus: user.company.subscriptionStatus,
               planDetails: null,
-            });
+            };
+            setSub(fallbackSub);
+            setSelectedPlanId(fallbackSub.plan || '');
           }
         }
       } finally {
@@ -44,19 +49,33 @@ export default function SubscriptionCard() {
     };
   }, [user]);
 
-  const activate = async () => {
+  const applyPlan = async () => {
+    if (!selectedPlanId) return;
     setActivating(true);
     setMessage('');
+    setError('');
     try {
-      await billingApi.activate({ paymentId: `mock_${Date.now()}` });
+      const res = await billingApi.checkout({ plan: selectedPlanId });
+      const session = res.data.data;
+      if (session?.provider !== 'razorpay') {
+        throw new Error('Real payment gateway is not configured');
+      }
+      const payment = await openRazorpayCheckout(session);
+      await billingApi.confirmPayment({
+        plan: selectedPlanId,
+        razorpayOrderId: payment.razorpay_order_id,
+        razorpayPaymentId: payment.razorpay_payment_id,
+        razorpaySignature: payment.razorpay_signature,
+      });
       const token = localStorage.getItem('token');
       if (token) await setSessionFromToken(token);
       const subRes = await billingApi.subscription();
       setSub(subRes.data.data);
-      setMessage('Subscription activated');
+      setSelectedPlanId(subRes.data.data?.plan || selectedPlanId);
+      setMessage(`Plan updated to ${subRes.data.data?.planDetails?.name || selectedPlanId}`);
       setError('');
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Activation failed');
+      setError(err.response?.data?.message || 'Plan update failed');
     } finally {
       setActivating(false);
     }
@@ -71,7 +90,8 @@ export default function SubscriptionCard() {
   }
 
   const active = sub?.subscriptionStatus === 'ACTIVE';
-  const planInfo = sub?.planDetails || plans.find((p) => p.id === sub?.plan || user?.plan);
+  const currentPlanId = sub?.plan || user?.plan;
+  const planInfo = sub?.planDetails || plans.find((p) => p.id === currentPlanId);
 
   return (
     <div className="profile-card">
@@ -84,8 +104,6 @@ export default function SubscriptionCard() {
           {active ? 'Active' : 'Payment pending'}
         </span>
       </div>
-
-      {error && <div className="alert-error mb-4 text-sm">{error}</div>}
 
       <div className="profile-readonly-grid mb-4">
         <div className="profile-field-block profile-field-block--wide">
@@ -101,14 +119,51 @@ export default function SubscriptionCard() {
         </div>
       </div>
 
-      {message && (
-        <div className={message.includes('activated') ? 'alert-success mb-4' : 'alert-error mb-4'}>{message}</div>
-      )}
+      {message && <div className="alert-success mb-4">{message}</div>}
+      {error && <div className="alert-error mb-4 text-sm">{error}</div>}
 
-      {!active && isSuperAdmin && (
-        <button type="button" className="btn-primary w-full sm:w-auto" disabled={activating} onClick={activate}>
-          {activating ? 'Activating…' : `Pay ${planInfo?.priceLabel || ''} & activate (demo)`}
-        </button>
+      {isSuperAdmin && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted">Select plan for this workspace</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {plans.map((plan) => {
+              const selected = selectedPlanId === plan.id;
+              const isCurrent = currentPlanId === plan.id;
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => setSelectedPlanId(plan.id)}
+                  className={`rounded-xl border px-3 py-2 text-left transition ${
+                    selected
+                      ? 'border-primary-500 bg-primary-500/10'
+                      : 'border-default hover:border-primary-500/40'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-main">{plan.name}</p>
+                  <p className="text-xs text-muted">
+                    {plan.priceLabel}
+                    {plan.period}
+                    {isCurrent ? ' · Current' : ''}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className="btn-primary w-full sm:w-auto"
+            disabled={activating || !selectedPlanId}
+            onClick={applyPlan}
+          >
+            {activating
+              ? 'Updating…'
+              : active
+                ? 'Pay securely and update plan'
+                : `Pay ${(plans.find((p) => p.id === selectedPlanId)?.priceLabel || planInfo?.priceLabel || '').trim()} & activate`}
+          </button>
+        </div>
       )}
     </div>
   );

@@ -14,6 +14,8 @@ import CallHistory from './pages/CallHistory';
 import FollowUps from './pages/FollowUps';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import BillingSuccess from './pages/BillingSuccess';
+import BillingCancel from './pages/BillingCancel';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -43,6 +45,8 @@ function AppRoutes() {
         <Route path="reports" element={<ProtectedRoute adminOnly requiredFeature="reports"><Reports /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute adminOnly requiredFeature="settings"><Settings /></ProtectedRoute>} />
       </Route>
+      <Route path="billing/success" element={<BillingSuccess />} />
+      <Route path="billing/cancel" element={<BillingCancel />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

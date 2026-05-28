@@ -3,6 +3,7 @@ import {
   listEmployees,
   createEmployee,
   importEmployees,
+  importEmployeesPreview,
   updateEmployee,
   deleteEmployee,
 } from '../controllers/employeeController.js';
@@ -14,6 +15,7 @@ router.use(authenticate);
 router.get('/', authorize('SUPER_ADMIN', 'MANAGER'), listEmployees);
 router.post('/', authorize('SUPER_ADMIN'), createEmployee);
 router.post('/import', authorize('SUPER_ADMIN'), importEmployees);
+router.post('/import/preview', authorize('SUPER_ADMIN'), importEmployeesPreview);
 router.put('/:id', authorize('SUPER_ADMIN'), updateEmployee);
 router.delete('/:id', authorize('SUPER_ADMIN'), deleteEmployee);
 

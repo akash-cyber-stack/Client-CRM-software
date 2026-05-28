@@ -4,8 +4,8 @@ import {
   createCheckoutSession,
   activateSubscription,
   getSubscription,
-  signPaymentToken,
   verifyPaymentToken,
+  verifyRazorpayPayment,
 } from '../services/billingService.js';
 import { toSafeUser, userSelectWithCompany } from '../utils/tenant.js';
 import prisma from '../config/db.js';
@@ -31,13 +31,41 @@ export const subscription = asyncHandler(async (req, res) => {
 
 export const checkout = asyncHandler(async (req, res) => {
   const { plan } = req.body;
-  const order = await createCheckoutSession(req.companyId, plan);
+  const order = await createCheckoutSession({
+    companyId: req.companyId,
+    plan,
+    customer: {
+      name: req.user.name,
+      email: req.user.email,
+      phone: req.user.phone,
+    },
+  });
+  res.json({ success: true, data: order });
+});
+
+export const checkoutPublic = asyncHandler(async (req, res) => {
+  const { paymentToken, plan } = req.body;
+  if (!paymentToken) {
+    return res.status(400).json({ success: false, message: 'Payment token is required' });
+  }
+  const decoded = verifyPaymentToken(paymentToken);
+  const order = await createCheckoutSession({
+    companyId: decoded.companyId,
+    plan: plan || decoded.plan,
+    customer: { email: decoded.email },
+  });
   res.json({ success: true, data: order });
 });
 
 /** After mock/real payment — activate plan (public with paymentToken from register) */
 export const confirmPayment = asyncHandler(async (req, res) => {
-  const { paymentToken, paymentId, plan } = req.body;
+  const {
+    paymentToken,
+    plan,
+    razorpayOrderId,
+    razorpayPaymentId,
+    razorpaySignature,
+  } = req.body;
 
   let companyId;
   let resolvedPlan = plan;
@@ -52,7 +80,13 @@ export const confirmPayment = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Payment session required' });
   }
 
-  await activateSubscription(companyId, { plan: resolvedPlan, paymentId });
+  verifyRazorpayPayment({
+    orderId: razorpayOrderId,
+    paymentId: razorpayPaymentId,
+    signature: razorpaySignature,
+  });
+
+  await activateSubscription(companyId, { plan: resolvedPlan, paymentId: razorpayPaymentId });
 
   const superAdmin = await prisma.user.findFirst({
     where: { companyId, role: 'SUPER_ADMIN' },
@@ -77,18 +111,10 @@ export const confirmPayment = asyncHandler(async (req, res) => {
 
 /** Logged-in Super Admin: mock pay to activate */
 export const activatePlan = asyncHandler(async (req, res) => {
-  const { plan, paymentId } = req.body;
-  const resolvedPlan = plan || req.user.company.plan;
-  await activateSubscription(req.companyId, { plan: resolvedPlan, paymentId });
-
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: userSelectWithCompany(),
-  });
-
-  res.json({
-    success: true,
-    message: 'Subscription activated',
-    data: { user: toSafeUser(user), paid: true },
+  res.status(410).json({
+    success: false,
+    message:
+      'Mock activation is disabled. Please complete real payment via checkout to activate or upgrade plan.',
+    code: 'REAL_PAYMENT_REQUIRED',
   });
 });

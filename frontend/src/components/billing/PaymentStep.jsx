@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { billingApi } from '../../api';
+import { openRazorpayCheckout } from '../../utils/razorpayCheckout';
 
 export default function PaymentStep({ paymentToken, planDetails, onSuccess, onError }) {
   const [loading, setLoading] = useState(false);
@@ -8,14 +9,30 @@ export default function PaymentStep({ paymentToken, planDetails, onSuccess, onEr
     setLoading(true);
     onError?.('');
     try {
-      const res = await billingApi.confirmPayment({
+      let res;
+      if (paymentToken) {
+        res = await billingApi.checkoutPublic({ paymentToken, plan: planDetails?.id });
+      } else {
+        res = await billingApi.checkout({ plan: planDetails?.id });
+      }
+
+      const session = res.data.data;
+      if (session?.provider !== 'razorpay') {
+        throw new Error('Real payment gateway is not configured');
+      }
+
+      const payment = await openRazorpayCheckout(session);
+
+      const confirmRes = await billingApi.confirmPayment({
         paymentToken,
         plan: planDetails?.id,
-        paymentId: `mock_${Date.now()}`,
+        razorpayOrderId: payment.razorpay_order_id,
+        razorpayPaymentId: payment.razorpay_payment_id,
+        razorpaySignature: payment.razorpay_signature,
       });
-      const data = res.data.data;
-      if (data.token) {
-        onSuccess?.(data.token, data.user);
+      const confirmData = confirmRes.data.data;
+      if (confirmData.token) {
+        onSuccess?.(confirmData.token, confirmData.user);
       } else {
         onSuccess?.(null, null);
       }
@@ -36,7 +53,7 @@ export default function PaymentStep({ paymentToken, planDetails, onSuccess, onEr
         </p>
       </div>
       <p className="text-sm text-muted mb-4">
-        Payment ke baad hi CRM use kar paoge. (Demo mode: Pay button se instant activate hota hai.)
+        Account activates only after successful real payment (UPI, card, netbanking, wallet).
       </p>
       <button type="button" className="auth-submit" disabled={loading} onClick={pay}>
         {loading ? 'Processing…' : `Pay ${planDetails?.priceLabel || ''} & Start CRM`}

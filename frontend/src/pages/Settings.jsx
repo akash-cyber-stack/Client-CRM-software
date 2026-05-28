@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { settingsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -31,7 +32,9 @@ const AUTOMATION_FIELDS = [
 ];
 
 export default function Settings() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isSuperAdmin } = useAuth();
+  const subscriptionRef = useRef(null);
   const [settings, setSettings] = useState({});
   const [superAdmin, setSuperAdmin] = useState(null);
   const [users, setUsers] = useState([]);
@@ -65,6 +68,18 @@ export default function Settings() {
       settingsApi.usersForPromotion().then((res) => setUsers(res.data.data)).catch(() => {});
     }
   }, [isSuperAdmin]);
+
+  useEffect(() => {
+    const focus = searchParams.get('focus');
+    if (focus !== 'subscription') return;
+    subscriptionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const timer = setTimeout(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete('focus');
+      setSearchParams(next, { replace: true });
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [searchParams, setSearchParams]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -111,7 +126,7 @@ export default function Settings() {
     <div className="page-enter settings-page w-full max-w-5xl mx-auto">
       <h1 className="text-xl sm:text-2xl font-bold text-main mb-6 sm:mb-8 tracking-tight">Settings</h1>
 
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 mb-6 sm:mb-8">
+      <div ref={subscriptionRef} className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 mb-6 sm:mb-8">
         <SubscriptionCard />
         <AccountProfileCard />
       </div>

@@ -71,11 +71,7 @@ export default function Sidebar() {
                 end={item.to === '/'}
                 onClick={handleNavClick}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
-                      : 'text-muted hover:text-main hover:bg-[var(--surface-hover)]'
-                  }`
+                  `crm-nav-link ${isActive ? 'crm-nav-link--active' : 'crm-nav-link--idle'}`
                 }
               >
                 <span className="text-base shrink-0">{item.icon}</span>

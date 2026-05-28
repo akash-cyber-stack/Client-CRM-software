@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../config/db.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { MAX_IMPORT_EMPLOYEES } from '../constants/limits.js';
-import { checkUserSeatAvailability, countCompanyUsers, getCompanyPlan } from '../services/planEnforcementService.js';
+import { checkUserSeatAvailability, countCompanyUsers, getCompanyPlan, checkManagerAvailability, countCompanyManagers } from '../services/planEnforcementService.js';
 import { getPlanLimits, planLimitMessage } from '../constants/planLimits.js';
 
 const userSelect = {
@@ -79,6 +79,15 @@ export const createEmployee = asyncHandler(async (req, res) => {
 
   const plan = req.user.company?.plan || 'STARTER';
   const seats = await checkUserSeatAvailability(req.companyId, plan, 1);
+  if (sanitizeRole(role) === 'MANAGER') {
+    const mgr = await checkManagerAvailability(req.companyId, plan, 1);
+    if (!mgr.ok) {
+      return res.status(403).json({
+        success: false,
+        message: planLimitMessage(plan, 'managers') || 'Manager limit reached for your plan',
+      });
+    }
+  }
   if (!seats.ok) {
     return res.status(403).json({
       success: false,
@@ -165,10 +174,49 @@ export const importEmployees = asyncHandler(async (req, res) => {
   const seats = await checkUserSeatAvailability(req.companyId, plan, 0);
   const duplicateEmailCount = normalizedEmployees.length - rowsToCreate.length;
   let skippedDueToPlanLimit = 0;
+  let skippedDueToManagerLimit = 0;
 
   if (seats.max != null && rowsToCreate.length > seats.remaining) {
     skippedDueToPlanLimit = rowsToCreate.length - seats.remaining;
     rowsToCreate = rowsToCreate.slice(0, seats.remaining);
+  }
+
+  const managersToCreate = rowsToCreate.filter((e) => e.role === 'MANAGER').length;
+  if (managersToCreate > 0) {
+    const mgr = await checkManagerAvailability(req.companyId, plan, managersToCreate);
+    if (!mgr.ok) {
+      // if no rows can be created due to manager limit, return error prompting upgrade
+      skippedDueToManagerLimit = managersToCreate - (mgr.remaining || 0);
+      if ((mgr.remaining || 0) <= 0) {
+        return res.status(403).json({
+          success: false,
+          message: planLimitMessage(plan, 'managers') || 'Manager limit reached for your plan',
+          data: {
+            createdCount: 0,
+            duplicateCount: normalizedEmployees.length,
+            skippedDueToManagerLimit,
+          },
+        });
+      }
+      // otherwise allow only as many managers as remaining
+      let allowedManagers = mgr.remaining || 0;
+      const allowedRows = [];
+      const remainingRows = [];
+      for (const r of rowsToCreate) {
+        if (r.role === 'MANAGER') {
+          if (allowedManagers > 0) {
+            allowedRows.push(r);
+            allowedManagers -= 1;
+          } else {
+            remainingRows.push(r);
+          }
+        } else {
+          allowedRows.push(r);
+        }
+      }
+      skippedDueToManagerLimit += remainingRows.length;
+      rowsToCreate = allowedRows;
+    }
   }
 
   if (rowsToCreate.length === 0 && skippedDueToPlanLimit > 0) {
@@ -216,6 +264,51 @@ export const importEmployees = asyncHandler(async (req, res) => {
       seatsMax: seats.max,
     },
   });
+});
+
+export const importEmployeesPreview = asyncHandler(async (req, res) => {
+  const { employees = [] } = req.body;
+
+  if (!Array.isArray(employees) || employees.length === 0) {
+    return res.status(400).json({ success: false, message: 'employees array is required' });
+  }
+
+  const normalizedEmployees = employees.map((employee) => ({
+    name: String(employee.name || '').trim(),
+    email: String(employee.email || '').trim().toLowerCase(),
+    phone: employee.phone ? String(employee.phone).trim() : null,
+    role: sanitizeRole(employee.role),
+  }));
+
+  const invalidRows = normalizedEmployees.filter((employee) => {
+    if (!employee.name || !employee.email) return true;
+    if (employee.role === 'SUPER_ADMIN') return true;
+    return false;
+  });
+
+  const existingEmployees = await prisma.user.findMany({
+    where: { companyId: req.companyId, email: { in: normalizedEmployees.map((e) => e.email) } },
+    select: { email: true, role: true },
+  });
+
+  const existingEmails = new Set(existingEmployees.map((e) => e.email));
+  const duplicateCount = normalizedEmployees.filter((e) => existingEmails.has(e.email)).length;
+
+  const plan = req.user.company?.plan || 'STARTER';
+  const seats = await checkUserSeatAvailability(req.companyId, plan, 0);
+  const managers = await countCompanyManagers(req.companyId);
+  const managersToCreate = normalizedEmployees.filter((e) => e.role === 'MANAGER' && !existingEmails.has(e.email)).length;
+  const mgrAvailability = await checkManagerAvailability(req.companyId, plan, managersToCreate);
+
+  const preview = {
+    totalRows: normalizedEmployees.length,
+    invalidRows: invalidRows.length,
+    duplicates: duplicateCount,
+    seats: { current: seats.current, max: seats.max, remaining: seats.remaining },
+    managers: { current: managers, willCreate: managersToCreate, managerRemaining: mgrAvailability.remaining, managerMax: mgrAvailability.max },
+  };
+
+  res.json({ success: true, data: preview });
 });
 
 export const updateEmployee = asyncHandler(async (req, res) => {

@@ -17,6 +17,10 @@ export async function countCompanyLeads(companyId) {
   return prisma.lead.count({ where: { companyId } });
 }
 
+export async function countCompanyManagers(companyId) {
+  return prisma.user.count({ where: { companyId, role: 'MANAGER' } });
+}
+
 /** @returns {{ ok: boolean, remaining: number, current: number, max: number|null, plan: string }} */
 export async function checkUserSeatAvailability(companyId, planId, additional = 1) {
   const plan = planId || (await getCompanyPlan(companyId));
@@ -52,6 +56,26 @@ export async function checkLeadCapacity(companyId, planId, additional = 1) {
     remaining,
     current,
     max: limits.maxLeads,
+    plan,
+  };
+}
+
+/** Check manager seat availability per plan */
+export async function checkManagerAvailability(companyId, planId, additional = 1) {
+  const plan = planId || (await getCompanyPlan(companyId));
+  const limits = getPlanLimits(plan);
+  const current = await countCompanyManagers(companyId);
+
+  if (limits.maxManagers == null) {
+    return { ok: true, remaining: Infinity, current, max: null, plan };
+  }
+
+  const remaining = Math.max(0, limits.maxManagers - current);
+  return {
+    ok: additional <= remaining,
+    remaining,
+    current,
+    max: limits.maxManagers,
     plan,
   };
 }
