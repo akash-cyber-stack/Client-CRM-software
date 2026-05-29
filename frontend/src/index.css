@@ -756,6 +756,414 @@ header,
     @apply opacity-60 cursor-not-allowed;
   }
 
+  .email-verify {
+    position: relative;
+    margin-top: 1.5rem;
+    padding: 2rem 1.25rem;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    background: linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.88));
+    border: 1px solid rgba(201, 162, 39, 0.25);
+    box-shadow: 0 0 40px rgba(201, 162, 39, 0.08);
+    animation: emailVerifyIn 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes emailVerifyIn {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .email-verify-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(48px);
+    pointer-events: none;
+    animation: emailOrbFloat 6s ease-in-out infinite;
+  }
+
+  .email-verify-orb--a {
+    width: 120px;
+    height: 120px;
+    top: -20px;
+    right: -10px;
+    background: rgba(201, 162, 39, 0.35);
+  }
+
+  .email-verify-orb--b {
+    width: 90px;
+    height: 90px;
+    bottom: -10px;
+    left: -20px;
+    background: rgba(59, 130, 246, 0.25);
+    animation-delay: -2s;
+  }
+
+  @keyframes emailOrbFloat {
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(8px, -12px);
+    }
+  }
+
+  .email-verify-core {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+  }
+
+  .email-verify-icon-wrap {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--auth-gold-light), var(--auth-gold));
+    animation: emailIconPulse 2.2s ease-in-out infinite;
+  }
+
+  @keyframes emailIconPulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 12px rgba(201, 162, 39, 0);
+    }
+  }
+
+  .email-verify-icon {
+    font-size: 1.5rem;
+  }
+
+  .email-verify-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0 0 0.35rem;
+  }
+
+  .email-verify-sub {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin: 0 0 1.5rem;
+    line-height: 1.5;
+  }
+
+  .email-verify-otp-row {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+  }
+
+  .email-verify-digit {
+    width: 2.75rem;
+    height: 3.25rem;
+    text-align: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    border-radius: 0.65rem;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.35);
+    color: #f4d47a;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+
+  .email-verify-digit:focus {
+    outline: none;
+    border-color: var(--auth-gold);
+    box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.25);
+    transform: scale(1.05);
+  }
+
+  .email-verify-digit.filled {
+    border-color: rgba(201, 162, 39, 0.6);
+  }
+
+  .email-verify-digit.complete {
+    animation: digitPop 0.35s ease;
+  }
+
+  @keyframes digitPop {
+    50% {
+      transform: scale(1.08);
+    }
+  }
+
+  .email-verify-dev {
+    font-size: 0.75rem;
+    color: #fbbf24;
+    margin-bottom: 0.75rem;
+  }
+
+  .email-verify-submit {
+    margin-top: 0.5rem;
+  }
+
+  .email-verify-resend {
+    display: block;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .email-verify-resend:hover:not(:disabled) {
+    color: var(--auth-gold-light);
+  }
+
+  .auth-email-otp-inline {
+    margin-top: 0.65rem;
+    animation: emailVerifyIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .auth-email-otp-inline--verified {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.35);
+  }
+
+  .auth-email-otp-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background: #22c55e;
+    color: #0f172a;
+    font-size: 0.7rem;
+  }
+
+  .auth-verify-otp-btn {
+    position: relative;
+    width: 100%;
+    padding: 0.65rem 1rem;
+    border-radius: 0.65rem;
+    border: 1px solid rgba(201, 162, 39, 0.45);
+    background: linear-gradient(
+      135deg,
+      rgba(201, 162, 39, 0.15) 0%,
+      rgba(201, 162, 39, 0.05) 100%
+    );
+    color: var(--auth-gold-light, #f4d47a);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .auth-verify-otp-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(201, 162, 39, 0.75);
+    box-shadow: 0 4px 20px rgba(201, 162, 39, 0.2);
+  }
+
+  .auth-verify-otp-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .auth-verify-otp-btn-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 60%
+    );
+    animation: authOtpBtnShine 2.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes authOtpBtnShine {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .auth-verify-otp-btn-text {
+    position: relative;
+    z-index: 1;
+  }
+
+  .auth-email-otp-panel {
+    position: relative;
+    margin-top: 0.5rem;
+    padding: 1rem 1rem 0.85rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(201, 162, 39, 0.25);
+    background: rgba(15, 23, 42, 0.5);
+    overflow: hidden;
+    animation: emailVerifyIn 0.4s ease;
+  }
+
+  .auth-email-otp-panel-glow {
+    position: absolute;
+    top: -40px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(201, 162, 39, 0.2);
+    filter: blur(32px);
+    pointer-events: none;
+    animation: emailOrbFloat 5s ease-in-out infinite;
+  }
+
+  .auth-email-otp-panel-hint {
+    position: relative;
+    z-index: 1;
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.45;
+  }
+
+  .auth-email-otp-digits {
+    position: relative;
+    z-index: 1;
+    justify-content: flex-start;
+    margin-bottom: 0.75rem;
+  }
+
+  .auth-email-otp-digits .email-verify-digit {
+    width: 2.35rem;
+    height: 2.75rem;
+    font-size: 1.15rem;
+  }
+
+  .auth-email-otp-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .auth-email-otp-submit {
+    margin-top: 0;
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .pwd-strength {
+    margin-top: 0.5rem;
+    animation: pwdStrengthIn 0.4s ease;
+  }
+
+  @keyframes pwdStrengthIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pwd-strength-track {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    margin-bottom: 0.65rem;
+  }
+
+  .pwd-strength-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .pwd-strength-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    filter: blur(4px);
+    transition: width 0.35s ease;
+    pointer-events: none;
+  }
+
+  .pwd-strength--valid .pwd-strength-fill {
+    background: linear-gradient(90deg, #16a34a, #4ade80);
+  }
+
+  .pwd-strength-rules {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #71717a;
+  }
+
+  .pwd-strength-rules li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.25s;
+  }
+
+  .pwd-strength-rules li.met {
+    color: #4ade80;
+  }
+
+  .pwd-strength-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  .pwd-strength-rules li.met .pwd-strength-dot {
+    opacity: 1;
+    animation: pwdDotPop 0.3s ease;
+  }
+
+  @keyframes pwdDotPop {
+    50% {
+      transform: scale(1.4);
+    }
+  }
+
   .auth-form-switch {
     @apply mt-8 pt-6 text-center text-sm text-muted;
     border-top: 1px solid var(--auth-border);

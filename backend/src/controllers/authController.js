@@ -18,6 +18,16 @@ import {
   oauthErrorRedirect,
   oauthSuccessRedirect,
 } from '../services/oauthService.js';
+import {
+  assertEmailVerifyToken,
+  assertPhoneVerifyToken,
+  sendAuthEmailOtp,
+  sendAuthPhoneOtp,
+  verifyAuthEmailOtp,
+  verifyAuthPhoneOtp,
+} from '../services/authOtpService.js';
+import { normalizeIndianMobile } from '../utils/maskContact.js';
+import { assertPassword } from '../utils/passwordPolicy.js';
 
 function issueToken(user) {
   return jwt.sign(
@@ -75,7 +85,75 @@ export const setupStatus = asyncHandler(async (_req, res) => {
       hasCompanies: hasSuperAdmin,
       canRegisterSuperAdmin: !hasSuperAdmin,
       oauthProviders: listOAuthProviders(),
+      emailOtpRequired: env.authEmailOtpRequired,
+      phoneOtpRequired: env.authPhoneOtpRequired,
     },
+  });
+});
+
+export const sendPhoneOtp = asyncHandler(async (req, res) => {
+  if (!env.authPhoneOtpRequired) {
+    return res.status(400).json({
+      success: false,
+      message: 'Phone SMS verification is not enabled. Use email OTP instead.',
+      code: 'PHONE_OTP_DISABLED',
+    });
+  }
+  const { phone } = req.body;
+  let target = phone;
+  if (req.user) {
+    target = phone || req.user.phone;
+  }
+  if (!target) {
+    return res.status(400).json({ success: false, message: 'Phone number is required' });
+  }
+  const data = await sendAuthPhoneOtp(target, req.user ? 'settings' : 'auth');
+  res.json({
+    success: true,
+    message: 'Verification code sent via SMS',
+    data,
+  });
+});
+
+export const verifyPhoneOtp = asyncHandler(async (req, res) => {
+  const { phone, otp, challengeId } = req.body;
+  if (!phone || !otp) {
+    return res.status(400).json({
+      success: false,
+      message: 'Phone and verification code are required',
+    });
+  }
+  const data = await verifyAuthPhoneOtp({ phone, otp, challengeId });
+  res.json({
+    success: true,
+    message: 'Phone verified',
+    data,
+  });
+});
+
+export const sendEmailOtp = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+  const data = await sendAuthEmailOtp(email, 'auth');
+  res.json({
+    success: true,
+    message: 'Verification code sent to your email',
+    data,
+  });
+});
+
+export const verifyEmailOtp = asyncHandler(async (req, res) => {
+  const { email, otp, challengeId } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, message: 'Email and verification code are required' });
+  }
+  const data = await verifyAuthEmailOtp({ email, otp, challengeId });
+  res.json({
+    success: true,
+    message: 'Email verified',
+    data,
   });
 });
 
@@ -100,7 +178,18 @@ function subscriptionErrorResponse(company, emailLower) {
 }
 
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, phone, password, role, companyName, plan, createWorkspace } = req.body;
+  const {
+    name,
+    email,
+    phone,
+    password,
+    role,
+    companyName,
+    plan,
+    createWorkspace,
+    emailVerifyToken,
+    phoneVerifyToken,
+  } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({
@@ -109,11 +198,18 @@ export const register = asyncHandler(async (req, res) => {
     });
   }
 
-  if (password.length < 6) {
-    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+  const emailLower = email.toLowerCase();
+  const phoneNorm = normalizeIndianMobile(phone);
+  if (!phoneNorm || phoneNorm.length !== 10) {
+    return res.status(400).json({
+      success: false,
+      message: 'Valid 10-digit phone number is required',
+    });
   }
 
-  const emailLower = email.toLowerCase();
+  assertEmailVerifyToken(emailVerifyToken, emailLower);
+  assertPhoneVerifyToken(phoneVerifyToken, phoneNorm);
+  assertPassword(password);
   const existingCompany = companyName ? await resolveCompanyForExistingWorkspace(companyName) : null;
   const isCreatingWorkspace = createWorkspace === true || Boolean(plan);
 
@@ -138,7 +234,7 @@ export const register = asyncHandler(async (req, res) => {
       name: companyName,
       plan: selectedPlan,
       contactEmail: emailLower,
-      contactPhone: phone || null,
+      contactPhone: phoneNorm,
     });
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -147,7 +243,7 @@ export const register = asyncHandler(async (req, res) => {
         companyId: company.id,
         name,
         email: emailLower,
-        phone: phone || null,
+        phone: phoneNorm,
         passwordHash,
         role: 'SUPER_ADMIN',
         department: 'Management',
@@ -239,12 +335,13 @@ export const register = asyncHandler(async (req, res) => {
 });
 
 export const login = asyncHandler(async (req, res) => {
-  const { email, password, companyName } = req.body;
+  const { email, password, companyName, emailVerifyToken } = req.body;
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Email and password are required' });
   }
 
   const emailLower = email.toLowerCase();
+  assertEmailVerifyToken(emailVerifyToken, emailLower);
   const { user, message } = await resolveLoginUser(emailLower, companyName);
 
   if (!user || !user.passwordHash) {
@@ -289,15 +386,26 @@ export const me = asyncHandler(async (req, res) => {
 });
 
 export const updateProfile = asyncHandler(async (req, res) => {
-  const { name, phone, currentPassword, newPassword } = req.body;
+  const { name, phone, currentPassword, newPassword, phoneVerifyToken } = req.body;
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
   if (!user) {
     return res.status(404).json({ success: false, message: 'User not found' });
   }
 
+  const phoneForVerify = normalizeIndianMobile(
+    phone !== undefined ? phone : user.phone
+  );
+  if (!phoneForVerify) {
+    return res.status(400).json({
+      success: false,
+      message: 'Add a valid 10-digit phone number',
+    });
+  }
+  assertPhoneVerifyToken(phoneVerifyToken, phoneForVerify);
+
   const data = {};
   if (name != null && String(name).trim()) data.name = String(name).trim();
-  if (phone !== undefined) data.phone = phone || null;
+  if (phone !== undefined) data.phone = phoneForVerify;
 
   if (newPassword) {
     if (!user.passwordHash) {
@@ -313,9 +421,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
     if (!ok) {
       return res.status(400).json({ success: false, message: 'Current password is incorrect' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
-    }
+    assertPassword(newPassword);
     data.passwordHash = await bcrypt.hash(newPassword, 10);
   }
 

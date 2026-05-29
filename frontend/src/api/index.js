@@ -2,6 +2,10 @@ import client from './client';
 
 export const authApi = {
   setupStatus: () => client.get('/auth/setup-status'),
+  sendEmailOtp: (data) => client.post('/auth/email-otp/send', data),
+  verifyEmailOtp: (data) => client.post('/auth/email-otp/verify', data),
+  sendPhoneOtp: (data) => client.post('/auth/phone-otp/send', data),
+  verifyPhoneOtp: (data) => client.post('/auth/phone-otp/verify', data),
   register: (data) => client.post('/auth/register', data),
   login: (data) => client.post('/auth/login', data),
   oauthProviders: () => client.get('/auth/oauth/providers'),
@@ -56,10 +60,15 @@ export const callsApi = {
 
 export const reportsApi = {
   dashboard: () => client.get('/reports/dashboard'),
+  employees: (params) => client.get('/reports/employees', { params }),
+  calls: (params) => client.get('/reports/calls', { params }),
+  conversions: (params) => client.get('/reports/conversions', { params }),
+  exportEmployees: () =>
+    client.get('/reports/employees/export', { responseType: 'blob' }),
   employeePerformance: (employeeId, params) =>
     client.get(`/reports/employees/${employeeId}/performance`, { params }),
   leadSources: () => client.get('/reports/lead-sources'),
-  campaigns: () => client.get('/reports/campaigns'),
+  campaigns: (params) => client.get('/reports/campaigns', { params }),
 };
 
 export const followUpsApi = {
@@ -72,6 +81,8 @@ export const notificationsApi = {
   list: (params) => client.get('/notifications', { params }),
   markRead: (id) => client.patch(`/notifications/${id}/read`),
   markAllRead: () => client.patch('/notifications/read-all'),
+  broadcast: (data) => client.post('/notifications/broadcast', data),
+  shareReport: (data) => client.post('/notifications/share-report', data),
 };
 
 export const settingsApi = {

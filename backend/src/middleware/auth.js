@@ -50,6 +50,32 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
+/** Sets req.user when Bearer token is valid; does not fail when missing. */
+export const optionalAuthenticate = async (req, res, next) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) return next();
+
+    const token = header.split(' ')[1];
+    const decoded = jwt.verify(token, env.jwtSecret);
+
+    const user = await withDbRetry(() =>
+      prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: userSelectWithCompany(),
+      })
+    );
+
+    if (user && user.status === 'ACTIVE') {
+      req.user = user;
+      req.companyId = user.companyId;
+    }
+  } catch {
+    /* ignore invalid token for optional auth */
+  }
+  next();
+};
+
 export const authorize = (...roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ success: false, message: 'Authentication required' });

@@ -43,8 +43,13 @@ export function AuthProvider({ children }) {
     return setSession(token, res.data.data);
   }, []);
 
-  const login = async ({ email, password, companyName }) => {
-    const res = await authApi.login({ email, password, companyName: companyName || undefined });
+  const login = async ({ email, password, companyName, emailVerifyToken }) => {
+    const res = await authApi.login({
+      email,
+      password,
+      companyName: companyName || undefined,
+      emailVerifyToken,
+    });
     const { token, user: u } = res.data.data;
     return setSession(token, u);
   };

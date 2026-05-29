@@ -11,6 +11,7 @@ import {
 import { playNotificationSound } from '../utils/notificationSound';
 import SubscriptionCard from '../components/settings/SubscriptionCard';
 import AccountProfileCard from '../components/settings/AccountProfileCard';
+import TeamNoticeCard from '../components/settings/TeamNoticeCard';
 
 const FIELDS = [
   { key: 'google_webhook_secret', label: 'Google Ads Webhook Secret', hint: 'Header: x-webhook-secret' },
@@ -130,6 +131,8 @@ export default function Settings() {
         <SubscriptionCard />
         <AccountProfileCard />
       </div>
+
+      {isSuperAdmin && <TeamNoticeCard />}
 
       {isSuperAdmin && (
         <div className="card w-full mb-6 sm:mb-8 border-2 border-primary-500/30">

@@ -14,3 +14,5 @@ backend/prisma/migrations/
 scripts/vercel-env.local
 .history/
 .env*.local
+.env.vercel.pull
+backend/.env.vercel.pull

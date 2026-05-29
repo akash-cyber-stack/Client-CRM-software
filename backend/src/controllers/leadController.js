@@ -131,6 +131,12 @@ export const createLead = asyncHandler(async (req, res) => {
   await logActivity(lead.id, 'LEAD_CREATED', 'Manual lead created');
   if (body.assignedToId) {
     await logActivity(lead.id, 'LEAD_ASSIGNED', 'Lead assigned on creation');
+    const { notifyOnLeadAssignment } = await import('../services/notificationService.js');
+    await notifyOnLeadAssignment({
+      lead: { ...lead, companyId: req.companyId },
+      assigneeId: body.assignedToId,
+      assignedBy: { id: req.user.id, name: req.user.name, role: req.user.role },
+    });
   } else if (req.body.autoAssign !== false) {
     try {
       const { autoAssignLead } = await import('../services/assignmentService.js');

@@ -78,6 +78,8 @@ enum NotificationType {
   MISSED_FOLLOW_UP
   CALL_RECORDING
   DUPLICATE_LEAD
+  ADMIN_NOTICE
+  REPORT_SHARED
 }
 
 enum ActivityType {
@@ -326,4 +328,17 @@ model LeadAssignmentState {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("lead_assignment_state")
+}
+
+model AuthOtpChallenge {
+  id        String   @id @default(uuid())
+  email     String
+  purpose   String   @default("auth")
+  otpHash   String   @map("otp_hash")
+  verified  Boolean  @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email, verified])
+  @@map("auth_otp_challenges")
 }

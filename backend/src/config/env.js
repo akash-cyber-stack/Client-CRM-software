@@ -74,13 +74,18 @@ export const env = {
   gstOtpExpiryMinutes: parseInt(cleanEnv(process.env.GST_OTP_EXPIRY_MINUTES, '10'), 10) || 10,
   gstOtpDevExpose: cleanEnv(process.env.GST_OTP_DEV_EXPOSE, 'true').toLowerCase() === 'true' &&
     cleanEnv(process.env.NODE_ENV, 'development') !== 'production',
+  authEmailOtpRequired: cleanEnv(process.env.AUTH_EMAIL_OTP_REQUIRED, 'true').toLowerCase() !== 'false',
+  authOtpExpiryMinutes: parseInt(cleanEnv(process.env.AUTH_OTP_EXPIRY_MINUTES, '10'), 10) || 10,
+  authOtpDevExpose:
+    cleanEnv(process.env.AUTH_OTP_DEV_EXPOSE, 'false').toLowerCase() === 'true' &&
+    cleanEnv(process.env.NODE_ENV, 'development') !== 'production',
+  authPhoneOtpRequired: cleanEnv(process.env.AUTH_PHONE_OTP_REQUIRED, 'false').toLowerCase() === 'true',
   stripeSecretKey: cleanEnv(process.env.STRIPE_SECRET_KEY, ''),
   stripeWebhookSecret: cleanEnv(process.env.STRIPE_WEBHOOK_SECRET, ''),
   razorpayKeyId: cleanEnv(process.env.RAZORPAY_KEY_ID, ''),
   razorpayKeySecret: cleanEnv(process.env.RAZORPAY_KEY_SECRET, ''),
   smsHttpUrl: cleanEnv(process.env.SMS_HTTP_URL, ''),
   smsApiKey: cleanEnv(process.env.SMS_API_KEY, ''),
-  fast2smsApiKey: cleanEnv(process.env.FAST2SMS_API_KEY, ''),
   smtpHttpUrl: cleanEnv(process.env.SMTP_HTTP_URL, ''),
   smtpApiKey: cleanEnv(process.env.SMTP_API_KEY, ''),
   smtpHost: cleanEnv(process.env.SMTP_HOST, 'smtp.gmail.com'),

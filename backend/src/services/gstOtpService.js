@@ -182,7 +182,7 @@ export async function sendGstOtp({ gstin, channel, mobile, email }) {
   if (!delivery.mobile && ch !== 'email') {
     throw Object.assign(
       new Error(
-        'SMS not sent. Add FAST2SMS_API_KEY in backend/.env (free: fast2sms.com) and restart server.'
+        'SMS not sent. Configure SMS_HTTP_URL in backend/.env or verify using email OTP only.'
       ),
       { statusCode: 503 }
     );

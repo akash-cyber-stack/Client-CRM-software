@@ -212,16 +212,27 @@ export async function importLeadsBulk({ companyId, rows, assignmentMode, assignT
       byAssignee.set(lead.assignedToId, (byAssignee.get(lead.assignedToId) || 0) + 1);
     }
 
+    const emailFrom =
+      assignedBy && ADMIN_ASSIGN_ROLES.includes(assignedBy.role)
+        ? { id: assignedBy.id, name: assignedBy.name, role: assignedBy.role }
+        : null;
+    const assignerLabel =
+      assignedBy?.role === 'SUPER_ADMIN'
+        ? `Super Admin ${assignedBy.name}`
+        : assignedBy?.name;
+
     await Promise.all(
       [...byAssignee.entries()].map(([userId, count]) =>
         createNotification({
           userId,
           type: 'LEAD_ASSIGNED',
           title: count === 1 ? 'New lead assigned' : `${count} new leads assigned`,
-          message:
-            count === 1
+          message: emailFrom
+            ? `${assignerLabel} imported and assigned ${count === 1 ? 'a lead' : `${count} leads`} to you.`
+            : count === 1
               ? 'A lead was imported and assigned to you.'
               : `${count} leads were imported and assigned to you.`,
+          emailFrom,
         })
       )
     );
@@ -238,6 +249,7 @@ export async function importLeadsBulk({ companyId, rows, assignmentMode, assignT
             type: 'LEAD_ASSIGNED',
             title: 'Team leads assigned',
             message: `${assignedBy.name} imported ${importedCount} lead(s) and assigned them to your team.`,
+            emailFrom,
           })
         )
       );

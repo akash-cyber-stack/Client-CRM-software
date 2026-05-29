@@ -7,6 +7,7 @@ const WORKSPACE_LIMITS = {
     leads: '500',
     ivr: 'off',
     automation: 'basic',
+    emailAlerts: 'off',
     ai: 'off',
     support: 'email',
   },
@@ -15,6 +16,7 @@ const WORKSPACE_LIMITS = {
     leads: 'unlimited',
     ivr: 'on',
     automation: 'full',
+    emailAlerts: 'on',
     ai: 'off',
     support: 'priority',
   },
@@ -23,6 +25,7 @@ const WORKSPACE_LIMITS = {
     leads: 'unlimited',
     ivr: 'on',
     automation: 'full',
+    emailAlerts: 'on',
     ai: 'on',
     support: 'dedicated',
   },
@@ -31,6 +34,7 @@ const WORKSPACE_LIMITS = {
 const MATRIX_ROWS = [
   { label: 'Seats', key: 'seats' },
   { label: 'Leads', key: 'leads' },
+  { label: 'Email alerts', key: 'emailAlerts' },
   { label: 'IVR', key: 'ivr' },
   { label: 'Automation', key: 'automation' },
   { label: 'AI layer', key: 'ai' },
@@ -105,6 +109,7 @@ export default function PlanSelector({ plans, selected, onSelect }) {
           <ConfigLine name="lead_cap" value={limits.leads} highlight />
           <ConfigLine name="ivr_bridge" value={limits.ivr} highlight />
           <ConfigLine name="automation" value={limits.automation} highlight />
+          <ConfigLine name="email_alerts" value={limits.emailAlerts} highlight />
           <ConfigLine name="ai_layer" value={limits.ai} highlight />
           <ConfigLine name="support_tier" value={limits.support} highlight />
         </div>
@@ -159,6 +164,16 @@ export default function PlanSelector({ plans, selected, onSelect }) {
       </div>
 
       <p className="plan-workspace-foot">{active.description}</p>
+      {limits.emailAlerts === 'on' ? (
+        <p className="plan-workspace-foot text-xs mt-2 opacity-90">
+          Email alerts: Super Admin lead assignments, team notices &amp; reports are emailed to each
+          member&apos;s registered address — even when the app is closed.
+        </p>
+      ) : (
+        <p className="plan-workspace-foot text-xs mt-2 opacity-75">
+          Starter includes in-app notifications only. Upgrade to Professional for email delivery.
+        </p>
+      )}
     </section>
   );
 }

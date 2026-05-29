@@ -6,7 +6,7 @@ export const PLANS = [
     priceLabel: '₹1,299',
     period: '/month',
     description: 'Small teams getting started',
-    features: ['Up to 5 users', '500 leads', 'Email support', 'Basic reports'],
+    features: ['Up to 5 users', '500 leads', 'Email support', 'Basic reports', 'In-app alerts only'],
     popular: false,
   },
   {
@@ -16,7 +16,13 @@ export const PLANS = [
     priceLabel: '₹3,299',
     period: '/month',
     description: 'Growing sales teams',
-    features: ['Up to 25 users', 'Unlimited leads', 'IVR integration', 'Automation alerts'],
+    features: [
+      'Up to 25 users',
+      'Unlimited leads',
+      'IVR integration',
+      'Automation alerts',
+      'Email alerts (leads, notices & reports)',
+    ],
     popular: true,
   },
   {
@@ -28,6 +34,7 @@ export const PLANS = [
     description: 'Full-scale operations with AI-led control',
     features: [
       'Unlimited users',
+      'Email alerts (leads, notices & reports)',
       'Priority support',
       'AI root-cause analysis',
       'Predictive follow-up engine',

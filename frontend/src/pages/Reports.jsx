@@ -4,6 +4,7 @@ import { reportsApi, employeesApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { SOURCE_LABELS } from '../utils/constants';
+import { ReportEmailButton } from '../components/settings/TeamNoticeCard';
 
 export default function Reports() {
   const { isAdmin } = useAuth();
@@ -67,9 +68,21 @@ export default function Reports() {
     <div className="page-enter">
       <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold text-main">Reports</h1>
-        {tab === 'employees' && isAdmin && (
-          <button className="btn-secondary" onClick={exportCsv}>Export CSV</button>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <ReportEmailButton
+            tab={tab}
+            summary={
+              data && typeof data === 'object'
+                ? `View the latest ${tab} report in your CRM dashboard.`
+                : ''
+            }
+          />
+          {tab === 'employees' && isAdmin && (
+            <button type="button" className="btn-secondary" onClick={exportCsv}>
+              Export CSV
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="card mb-4 flex flex-wrap gap-3">

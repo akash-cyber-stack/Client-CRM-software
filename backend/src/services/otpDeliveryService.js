@@ -39,36 +39,6 @@ async function sendEmailOtp(email, otp, gstin) {
   return true;
 }
 
-async function sendSmsFast2Sms(mobile, otp, gstin) {
-  if (!env.fast2smsApiKey) return false;
-
-  const digits = String(mobile).replace(/\D/g, '').slice(-10);
-  if (digits.length !== 10) return false;
-
-  const message = `Your Sales Lead CRM GST OTP for ${gstin} is ${otp}. Valid ${env.gstOtpExpiryMinutes} min.`;
-
-  const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-    method: 'POST',
-    headers: {
-      authorization: env.fast2smsApiKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      route: 'q',
-      message,
-      language: 'english',
-      numbers: digits,
-    }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  const ok = data?.return === true || (res.ok && Array.isArray(data?.message));
-  if (!ok) {
-    console.error('[Fast2SMS]', data?.message || data);
-  }
-  return ok;
-}
-
 async function sendSmsHttp(mobile, otp, gstin) {
   if (!env.smsHttpUrl) return false;
   const label = `GST ${gstin}`;
@@ -85,13 +55,13 @@ async function sendSmsHttp(mobile, otp, gstin) {
 }
 
 /**
- * Deliver OTP to GST-registered mobile + email (real send when configured).
+ * Deliver OTP to GST-registered mobile + email (email via SMTP; optional SMS_HTTP_URL).
  */
 export async function deliverOtp({ mobile, email, otp, gstin }) {
   const results = { mobile: false, email: false, devOtp: null };
 
   const canRealEmail = Boolean(env.smtpUser && env.smtpPass);
-  const canRealSms = Boolean(env.fast2smsApiKey || env.smsHttpUrl);
+  const canRealSms = Boolean(env.smsHttpUrl);
 
   if (env.gstOtpDevExpose && !canRealEmail && !canRealSms) {
     results.devOtp = otp;
@@ -99,12 +69,10 @@ export async function deliverOtp({ mobile, email, otp, gstin }) {
 
   if (mobile) {
     try {
-      if (env.fast2smsApiKey) {
-        results.mobile = await sendSmsFast2Sms(mobile, otp, gstin);
-      } else if (env.smsHttpUrl) {
+      if (env.smsHttpUrl) {
         results.mobile = await sendSmsHttp(mobile, otp, gstin);
       } else if (!canRealSms) {
-        console.warn('[GST OTP] SMS not configured — set FAST2SMS_API_KEY in backend/.env');
+        console.warn('[GST OTP] SMS not configured — set SMS_HTTP_URL or use email-only OTP');
       }
     } catch (err) {
       console.error('[GST OTP SMS failed]', err.message);
@@ -129,7 +97,7 @@ export async function deliverOtp({ mobile, email, otp, gstin }) {
         });
         results.email = res.ok;
       } else {
-        console.warn('[GST OTP] Email not configured — set SMTP_USER + SMTP_PASS (Gmail App Password) in backend/.env');
+        console.warn('[GST OTP] Email not configured — set SMTP_USER + SMTP_PASS in backend/.env');
       }
     } catch (err) {
       console.error('[GST OTP Email failed]', err.message);
@@ -138,4 +106,12 @@ export async function deliverOtp({ mobile, email, otp, gstin }) {
   }
 
   return results;
+}
+
+/** Auth phone SMS OTP — disabled (use email OTP only). */
+export async function deliverAuthPhoneOtp(_mobile, _otp) {
+  return {
+    sent: false,
+    error: 'Phone SMS verification is disabled. Use email OTP to sign in or register.',
+  };
 }
