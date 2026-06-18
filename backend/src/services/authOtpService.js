@@ -123,12 +123,13 @@ export async function sendAuthEmailOtp(email, purpose = 'auth') {
 
   const transport = getMailTransporter();
   if (!transport) {
-    throw Object.assign(
-      new Error(
-        'Email is not configured. Add SMTP_USER and SMTP_PASS (Gmail App Password) in backend/.env'
-      ),
-      { statusCode: 503, code: 'SMTP_NOT_CONFIGURED' }
-    );
+    const hint = process.env.VERCEL
+      ? 'Add SMTP_USER and SMTP_PASS (Gmail App Password) in Vercel → Project → Settings → Environment Variables, then redeploy.'
+      : 'Add SMTP_USER and SMTP_PASS (Gmail App Password) in backend/.env';
+    throw Object.assign(new Error(`Email is not configured. ${hint}`), {
+      statusCode: 503,
+      code: 'SMTP_NOT_CONFIGURED',
+    });
   }
 
   const minutes = env.authOtpExpiryMinutes;
