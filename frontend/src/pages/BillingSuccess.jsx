@@ -25,7 +25,7 @@ export default function BillingSuccess() {
         )}
         <div className="mt-8 space-y-3">
           {user ? (
-            <Link to="/" className="btn-primary w-full text-center">
+            <Link to="/dashboard" className="btn-primary w-full text-center">
               Go back to CRM
             </Link>
           ) : (

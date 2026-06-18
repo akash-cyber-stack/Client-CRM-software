@@ -7,6 +7,8 @@ import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import ImportLeadsModal from '../components/ImportLeadsModal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import LeadPulseBadge from '../components/leads/LeadPulseBadge';
+import LeadsKanban from '../components/leads/LeadsKanban';
 import { getApiErrorMessage } from '../utils/apiError';
 import { LEAD_STATUSES, LEAD_SOURCES, SOURCE_LABELS, formatDate } from '../utils/constants';
 
@@ -37,6 +39,7 @@ export default function Leads() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [deleting, setDeleting] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [viewMode, setViewMode] = useState('table');
 
   const load = async () => {
     setLoading(true);
@@ -59,6 +62,12 @@ export default function Leads() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new' && isAdmin) {
+      setManualOpen(true);
+    }
+  }, [searchParams, isAdmin]);
 
   useEffect(() => {
     const status = searchParams.get('status');
@@ -178,25 +187,34 @@ export default function Leads() {
   return (
     <div className="page-enter">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <h1 className="text-2xl font-bold text-main tracking-tight">Leads</h1>
-        {isAdmin && (
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              className="btn-primary flex-1 sm:flex-none"
-              onClick={() => { setFormError(''); setForm(emptyForm); setManualOpen(true); }}
-            >
-              Add Lead Manually
-            </button>
-            <button
-              type="button"
-              className="btn-secondary flex-1 sm:flex-none"
-              onClick={() => setImportOpen(true)}
-            >
-              Import Leads
-            </button>
+        <div>
+          <h1 className="text-2xl font-bold text-main tracking-tight">Lead Vault</h1>
+          <p className="text-sm text-muted mt-1">Table or Kanban · Pulse-ranked priority</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="view-toggle" role="group" aria-label="View mode">
+            <button type="button" className={viewMode === 'table' ? 'is-active' : ''} onClick={() => setViewMode('table')}>Table</button>
+            <button type="button" className={viewMode === 'kanban' ? 'is-active' : ''} onClick={() => setViewMode('kanban')}>Kanban</button>
           </div>
-        )}
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                className="btn-primary flex-1 sm:flex-none"
+                onClick={() => { setFormError(''); setForm(emptyForm); setManualOpen(true); }}
+              >
+                Add Lead Manually
+              </button>
+              <button
+                type="button"
+                className="btn-secondary flex-1 sm:flex-none"
+                onClick={() => setImportOpen(true)}
+              >
+                Import Leads
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {listError && <div className="alert-error mb-4">{listError}</div>}
@@ -249,7 +267,9 @@ export default function Leads() {
         </div>
       )}
 
-      {loading ? <LoadingSpinner /> : (
+      {loading ? <LoadingSpinner /> : viewMode === 'kanban' ? (
+        <LeadsKanban leads={leads} />
+      ) : (
         <div className="card overflow-x-auto">
           {leads.length > 0 && (
             <p className="text-xs text-muted px-4 pt-3 pb-1">
@@ -278,6 +298,7 @@ export default function Leads() {
                     />
                   </th>
                 )}
+                <th className="pb-3 pr-4">Pulse</th>
                 <th className="pb-3 pr-4">SNO</th>
                 <th className="pb-3 pr-4">Customer</th>
                 <th className="pb-3 pr-4">Phone</th>
@@ -306,6 +327,7 @@ export default function Leads() {
                       />
                     </td>
                   )}
+                  <td className="py-3 pr-4"><LeadPulseBadge lead={l} compact /></td>
                   <td className="py-3 pr-4 tabular-nums">{l.leadNumber}</td>
                   <td className="py-3 pr-4 font-medium">{l.customerName}</td>
                   <td className="py-3 pr-4">{l.phone}</td>

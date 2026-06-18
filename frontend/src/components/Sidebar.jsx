@@ -5,13 +5,13 @@ import { canAccessFeature } from '../utils/planAccess';
 import BrandLogo from './BrandLogo';
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: '📊', feature: 'dashboard' },
-  { to: '/leads', label: 'Leads', icon: '👥', feature: 'leads' },
-  { to: '/employees', label: 'Employees', icon: '👔', adminOnly: true, feature: 'employees' },
-  { to: '/calls', label: 'Call History', icon: '📞', adminOnly: true, feature: 'calls' },
-  { to: '/follow-ups', label: 'Follow-ups', icon: '📅', feature: 'follow-ups' },
-  { to: '/reports', label: 'Reports', icon: '📈', adminOnly: true, feature: 'reports' },
-  { to: '/settings', label: 'Settings', icon: '⚙️', adminOnly: true, feature: 'settings' },
+  { to: '/dashboard', label: 'Command Center', icon: '📊', feature: 'dashboard' },
+  { to: '/leads', label: 'Lead Vault', icon: '👥', feature: 'leads' },
+  { to: '/employees', label: 'Team Grid', icon: '👔', adminOnly: true, feature: 'employees' },
+  { to: '/calls', label: 'Call Bridge', icon: '📞', adminOnly: true, feature: 'calls' },
+  { to: '/follow-ups', label: 'Follow-up Radar', icon: '📅', feature: 'follow-ups' },
+  { to: '/reports', label: 'Insight Studio', icon: '📈', adminOnly: true, feature: 'reports' },
+  { to: '/settings', label: 'Control Room', icon: '⚙️', adminOnly: true, feature: 'settings' },
 ];
 
 export default function Sidebar() {

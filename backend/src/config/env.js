@@ -80,6 +80,7 @@ export const env = {
     cleanEnv(process.env.AUTH_OTP_DEV_EXPOSE, 'false').toLowerCase() === 'true' &&
     cleanEnv(process.env.NODE_ENV, 'development') !== 'production',
   authPhoneOtpRequired: cleanEnv(process.env.AUTH_PHONE_OTP_REQUIRED, 'false').toLowerCase() === 'true',
+  trialDays: parseInt(cleanEnv(process.env.TRIAL_DAYS, '10'), 10) || 10,
   stripeSecretKey: cleanEnv(process.env.STRIPE_SECRET_KEY, ''),
   stripeWebhookSecret: cleanEnv(process.env.STRIPE_WEBHOOK_SECRET, ''),
   razorpayKeyId: cleanEnv(process.env.RAZORPAY_KEY_ID, ''),

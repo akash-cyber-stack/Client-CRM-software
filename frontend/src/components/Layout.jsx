@@ -3,6 +3,7 @@ import { NotificationProvider } from '../context/NotificationContext';
 import { LayoutProvider, useLayout } from '../context/LayoutContext';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import CommandPalette from './CommandPalette';
 
 function LayoutShell() {
   const { sidebarOpen } = useLayout();
@@ -30,6 +31,7 @@ export default function Layout() {
   return (
     <LayoutProvider>
       <NotificationProvider>
+        <CommandPalette />
         <LayoutShell />
       </NotificationProvider>
     </LayoutProvider>

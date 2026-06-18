@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Allow: /features
+Allow: /modules
+Allow: /pricing
+Allow: /faq
+Allow: /login
+
+Disallow: /dashboard
+Disallow: /leads
+Disallow: /employees
+Disallow: /calls
+Disallow: /follow-ups
+Disallow: /reports
+Disallow: /settings
+Disallow: /billing/
+
+Sitemap: https://sales-crm-ipi.vercel.app/sitemap.xml

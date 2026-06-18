@@ -91,7 +91,7 @@ export default function EmployeePerformance() {
 
   return (
     <div className="page-enter max-w-5xl">
-      <Link to="/" className="text-primary-500 text-sm hover:underline mb-4 inline-block">
+      <Link to="/dashboard" className="text-primary-500 text-sm hover:underline mb-4 inline-block">
         ← Back to Dashboard
       </Link>
 

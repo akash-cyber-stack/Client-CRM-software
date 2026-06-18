@@ -132,9 +132,32 @@ export default function Dashboard() {
   return (
     <div className="page-enter dashboard-page">
       <PageHeader
-        title="Dashboard"
+        title="Command Center"
         subtitle={isAdmin ? 'Leads, calls & team performance at a glance' : 'Your pipeline & follow-ups'}
       />
+
+      <div className="signal-band card mb-6">
+        <div className="signal-band__item">
+          <span className="signal-band__label">Pipeline velocity</span>
+          <strong>{data.conversionRate ?? 0}%</strong>
+          <small>conversion rate</small>
+        </div>
+        <div className="signal-band__item">
+          <span className="signal-band__label">Intake (7d)</span>
+          <strong>{(data.leadsLast7Days || []).reduce((s, d) => s + (d.count || 0), 0)}</strong>
+          <small>new leads</small>
+        </div>
+        <div className="signal-band__item">
+          <span className="signal-band__label">Follow-up radar</span>
+          <strong>{data.todayFollowUps ?? 0}</strong>
+          <small>due today</small>
+        </div>
+        <div className="signal-band__item signal-band__item--accent">
+          <span className="signal-band__label">Signal OS</span>
+          <strong>⌘K</strong>
+          <small>command palette</small>
+        </div>
+      </div>
 
       <div className="dashboard-stats grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {statCards.map((card) => (

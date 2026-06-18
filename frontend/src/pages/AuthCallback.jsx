@@ -15,7 +15,7 @@ export default function AuthCallback() {
       return;
     }
     setSessionFromToken(token)
-      .then(() => navigate('/', { replace: true }))
+      .then(() => navigate('/dashboard', { replace: true }))
       .catch(() => navigate('/login?oauth_error=session_failed', { replace: true }));
   }, [params, navigate, setSessionFromToken]);
 

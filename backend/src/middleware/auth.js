@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import prisma from '../config/db.js';
 import { toSafeUser, userSelectWithCompany } from '../utils/tenant.js';
-import { withDbRetry } from '../utils/dbRetry.js';
+import { hasWorkspaceAccess } from '../utils/subscriptionAccess.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -29,10 +29,10 @@ export const authenticate = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Company account is suspended' });
     }
 
-    if (user.company?.subscriptionStatus !== 'ACTIVE') {
+    if (!hasWorkspaceAccess(user.company)) {
       return res.status(403).json({
         success: false,
-        message: 'Please complete your plan payment to use the CRM',
+        message: 'Your free trial has ended. Complete payment to continue using the CRM.',
         code: 'PAYMENT_REQUIRED',
         plan: user.company?.plan,
       });

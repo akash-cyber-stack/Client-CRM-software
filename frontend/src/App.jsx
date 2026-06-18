@@ -3,6 +3,11 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import Landing from './pages/Landing';
+import FeaturesPage from './pages/marketing/FeaturesPage';
+import ModulesPage from './pages/marketing/ModulesPage';
+import PricingPage from './pages/marketing/PricingPage';
+import FaqPage from './pages/marketing/FaqPage';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
@@ -19,6 +24,13 @@ import BillingCancel from './pages/BillingCancel';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 
+function HomeRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingSpinner className="min-h-screen" />;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Landing />;
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -26,7 +38,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+      <Route path="/" element={<HomeRoute />} />
+      <Route path="/features" element={<FeaturesPage />} />
+      <Route path="/modules" element={<ModulesPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/faq" element={<FaqPage />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route
         element={
@@ -35,7 +52,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Dashboard />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="leads" element={<ProtectedRoute requiredFeature="leads"><Leads /></ProtectedRoute>} />
         <Route path="leads/:id" element={<ProtectedRoute requiredFeature="leads"><LeadDetail /></ProtectedRoute>} />
         <Route path="employees" element={<ProtectedRoute adminOnly requiredFeature="employees"><Employees /></ProtectedRoute>} />
@@ -47,7 +64,7 @@ function AppRoutes() {
       </Route>
       <Route path="billing/success" element={<BillingSuccess />} />
       <Route path="billing/cancel" element={<BillingCancel />} />
-      <Route path="*" element={<Navigate to="/" />} />
+      <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} />
     </Routes>
   );
 }

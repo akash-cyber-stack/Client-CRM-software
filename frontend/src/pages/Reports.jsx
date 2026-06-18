@@ -67,7 +67,8 @@ export default function Reports() {
   return (
     <div className="page-enter">
       <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-main">Reports</h1>
+        <h1 className="text-2xl font-bold text-main">Insight Studio</h1>
+        <p className="text-sm text-muted">Campaigns, conversions & team performance</p>
         <div className="flex flex-wrap items-center gap-3">
           <ReportEmailButton
             tab={tab}

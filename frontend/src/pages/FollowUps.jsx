@@ -7,6 +7,15 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatDate } from '../utils/constants';
 
+function followUpUrgency(scheduledAt, tab) {
+  if (tab === 'missed') return { label: 'Overdue', className: 'urgency urgency--critical' };
+  const hours = (new Date(scheduledAt).getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hours < 0) return { label: 'Late', className: 'urgency urgency--critical' };
+  if (hours < 4) return { label: 'Urgent', className: 'urgency urgency--high' };
+  if (hours < 24) return { label: 'Today', className: 'urgency urgency--medium' };
+  return { label: 'Scheduled', className: 'urgency urgency--low' };
+}
+
 const TABS = [
   { key: 'today', label: "Today's Follow-ups" },
   { key: 'pending', label: 'Pending' },
@@ -55,7 +64,8 @@ export default function FollowUps() {
 
   return (
     <div className="page-enter">
-      <h1 className="text-2xl font-bold text-main mb-8 tracking-tight">Follow-ups</h1>
+      <h1 className="text-2xl font-bold text-main mb-2 tracking-tight">Follow-up Radar</h1>
+      <p className="text-sm text-muted mb-8">Urgency-ranked touchpoints — missed items surface first.</p>
 
       {dashboard && (
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -100,19 +110,24 @@ export default function FollowUps() {
           <div className="text-center py-12 text-red-600 card font-medium">Unexpected error: followUps data is not an array.</div>
         ) : (
           <div className="space-y-3">
-            {followUps.map((f) => (
-              <div key={f.id} className="card flex flex-wrap items-center justify-between gap-4">
+            {followUps.map((f) => {
+              const urgency = followUpUrgency(f.scheduledAt, type);
+              return (
+              <div key={f.id} className="card flex flex-wrap items-center justify-between gap-4 follow-up-card">
                 <div>
-                  <Link to={`/leads/${f.lead.id}`} className="font-semibold text-primary-600 hover:underline">
-                    {f.lead.customerName}
-                  </Link>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={urgency.className}>{urgency.label}</span>
+                    <Link to={`/leads/${f.lead.id}`} className="font-semibold text-primary-600 hover:underline">
+                      {f.lead.customerName}
+                    </Link>
+                  </div>
                   <p className="text-sm text-muted">{f.lead.phone} &middot; {formatDate(f.scheduledAt)}</p>
                   {f.remarks && <p className="text-sm mt-1">{f.remarks}</p>}
                   {isAdmin && <p className="text-xs text-subtle">Employee: {f.employee?.name}</p>}
                 </div>
                 <button className="btn-primary text-sm" onClick={() => complete(f.id)}>Mark Complete</button>
               </div>
-            ))}
+            );})}
           </div>
         )
       )}

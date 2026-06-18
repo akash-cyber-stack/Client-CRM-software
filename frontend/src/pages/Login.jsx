@@ -12,6 +12,8 @@ import { normalizePhoneInput } from '../utils/phoneVerifySession';
 import PlanSelector from '../components/billing/PlanSelector';
 import PaymentStep from '../components/billing/PaymentStep';
 import { IconEye, IconEyeOff } from '../components/auth/AuthIcons';
+import { PAGE_SEO } from '../constants/marketingSeo';
+import MarketingSEO from '../components/marketing/MarketingSEO';
 import { checkPassword } from '../utils/passwordPolicy';
 
 const REMEMBER_KEY = 'crm-remember-email';
@@ -115,6 +117,12 @@ export default function Login() {
   useEffect(() => {
     const oauthErr = searchParams.get('oauth_error');
     if (oauthErr) setError(decodeURIComponent(oauthErr));
+    const modeParam = searchParams.get('mode');
+    if (modeParam === 'register') setMode('register');
+    const planParam = searchParams.get('plan');
+    if (planParam && ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'].includes(planParam)) {
+      setSelectedPlan(planParam);
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -188,7 +196,7 @@ export default function Login() {
 
     localStorage.setItem('token', data.token);
     await setSessionFromToken(data.token);
-    navigate('/');
+    navigate('/dashboard');
   };
 
   const handleSignIn = async (e) => {
@@ -203,7 +211,7 @@ export default function Login() {
       if (remember) localStorage.setItem(REMEMBER_KEY, email);
       else localStorage.removeItem(REMEMBER_KEY);
       await login({ email, password, companyName, emailVerifyToken });
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       const data = err.response?.data;
       if (data?.code === 'PAYMENT_REQUIRED' && data?.data?.paymentToken) {
@@ -258,7 +266,7 @@ export default function Login() {
   const onPaymentSuccess = async (token) => {
     if (token) {
       await setSessionFromToken(token);
-      navigate('/');
+      navigate('/dashboard');
     } else {
       setMode('signin');
       setPaymentSession(null);
@@ -301,6 +309,7 @@ export default function Login() {
 
   return (
     <div className="auth-page min-h-screen min-h-[100dvh] flex flex-col lg:flex-row">
+      <MarketingSEO {...PAGE_SEO.login} />
       <AuthFormPanel>
         <div className="auth-form-card">
           <AuthFlowTabs mode={mode} onChange={switchMode} />
@@ -315,7 +324,7 @@ export default function Login() {
             {mode === 'signin'
               ? 'Sign in with your email and password.'
               : setup.canRegisterSuperAdmin
-                ? 'Pick a plan, register, pay — then use the CRM.'
+                ? `Pick a plan and register — ${setup.trialDays || 10}-day free trial, no card required.`
                 : 'Join your team workspace.'}
           </p>
 

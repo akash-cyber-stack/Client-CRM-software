@@ -2,6 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLayout } from '../context/LayoutContext';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
+import { CommandPaletteHint } from './CommandPalette';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -37,6 +38,7 @@ export default function Navbar() {
         </div>
       </div>
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        <CommandPaletteHint />
         <ThemeToggle />
         <NotificationBell />
         <button onClick={logout} className="btn-secondary text-xs sm:text-sm px-2.5 sm:px-4 py-2">

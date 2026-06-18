@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import prisma from '../config/db.js';
+import { ensureTrialColumn, trialEndDate, hasWorkspaceAccess } from '../utils/subscriptionAccess.js';
 
 const DEFAULT_SETTINGS = {
   google_webhook_secret: '',
@@ -36,6 +37,7 @@ async function seedCompanyDefaults(companyId) {
 }
 
 export async function getCompanyById(id) {
+  await ensureTrialColumn();
   return prisma.company.findUnique({ where: { id } });
 }
 
@@ -43,21 +45,27 @@ export async function getDefaultCompany() {
   return prisma.company.findFirst({ orderBy: { createdAt: 'asc' } });
 }
 
+
 export async function createCompany({ name, plan = 'STARTER', contactEmail, contactPhone }) {
+  await ensureTrialColumn();
+  const ends = trialEndDate();
   const company = await prisma.company.create({
     data: {
       name: String(name).trim(),
       gstin: internalGstin(),
       plan,
-      subscriptionStatus: 'PENDING',
+      subscriptionStatus: 'ACTIVE',
       contactEmail: contactEmail ? String(contactEmail).toLowerCase() : null,
       contactPhone: contactPhone || null,
       status: 'ACTIVE',
     },
   });
+  await prisma.$executeRaw`
+    UPDATE "companies" SET "trial_ends_at" = ${ends} WHERE "id" = ${company.id}
+  `;
 
   await seedCompanyDefaults(company.id);
-  return company;
+  return { ...company, trialEndsAt: ends };
 }
 
 export async function getCompanyProfile(companyId) {
@@ -121,6 +129,7 @@ export async function hasSuperAdminInCompany(companyId) {
   return count > 0;
 }
 
+
 export function assertSubscriptionActive(company) {
   if (!company) {
     throw Object.assign(new Error('Company not found'), { statusCode: 404 });
@@ -128,7 +137,7 @@ export function assertSubscriptionActive(company) {
   if (company.status !== 'ACTIVE') {
     throw Object.assign(new Error('Company account is suspended'), { statusCode: 403 });
   }
-  if (company.subscriptionStatus !== 'ACTIVE') {
+  if (!hasWorkspaceAccess(company)) {
     throw Object.assign(new Error('Please complete your plan payment to use the CRM'), {
       statusCode: 403,
       code: 'PAYMENT_REQUIRED',

@@ -28,6 +28,7 @@ import {
 } from '../services/authOtpService.js';
 import { normalizeIndianMobile } from '../utils/maskContact.js';
 import { assertPassword } from '../utils/passwordPolicy.js';
+import { hasWorkspaceAccess } from '../utils/subscriptionAccess.js';
 
 function issueToken(user) {
   return jwt.sign(
@@ -87,6 +88,7 @@ export const setupStatus = asyncHandler(async (_req, res) => {
       oauthProviders: listOAuthProviders(),
       emailOtpRequired: env.authEmailOtpRequired,
       phoneOtpRequired: env.authPhoneOtpRequired,
+      trialDays: env.trialDays,
     },
   });
 });
@@ -252,7 +254,7 @@ export const register = asyncHandler(async (req, res) => {
       include: { company: true },
     });
 
-    if (company.subscriptionStatus !== 'ACTIVE') {
+    if (!hasWorkspaceAccess(company)) {
       const paymentToken = signPaymentToken({
         companyId: company.id,
         email: emailLower,
@@ -275,8 +277,8 @@ export const register = asyncHandler(async (req, res) => {
     const token = issueToken(user);
     return res.status(201).json({
       success: true,
-      message: 'Registration successful',
-      data: { token, user: toSafeUser(user) },
+      message: `Workspace ready — ${env.trialDays}-day free trial started. No card required.`,
+      data: { token, user: toSafeUser(user), trialDays: env.trialDays },
     });
   }
 
@@ -308,7 +310,7 @@ export const register = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid role' });
   }
 
-  if (existingCompany.subscriptionStatus !== 'ACTIVE') {
+  if (!hasWorkspaceAccess(existingCompany)) {
     return res.status(403).json(subscriptionErrorResponse(existingCompany, emailLower));
   }
 
@@ -353,7 +355,7 @@ export const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ success: false, message: 'Invalid email or password' });
   }
 
-  if (user.company.subscriptionStatus !== 'ACTIVE') {
+  if (!hasWorkspaceAccess(user.company)) {
     const paymentToken = signPaymentToken({
       companyId: user.companyId,
       email: user.email,
