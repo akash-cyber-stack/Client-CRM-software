@@ -8,8 +8,8 @@ export default function PricingPage() {
     <MarketingLayout seo={PAGE_SEO.pricing}>
       <MarketingPageHero
         kicker="INR billing"
-        title="Start with a 10-day trial — pay only when your floor is hooked"
-        subtitle={`${TRIAL_HEADLINE}. All plans bill monthly through Razorpay after trial. Flat workspace pricing — not per-user.`}
+        title="Start with a 10-day trial. Pay only when the floor is ready."
+        subtitle={`${TRIAL_HEADLINE}. All plans bill monthly through Razorpay after trial. Flat workspace pricing, not per-user.`}
       />
 
       <div className="mkt-pricing-grid">

@@ -9,7 +9,7 @@ export default function FeaturesPage() {
       <MarketingPageHero
         kicker="Product depth"
         title="Features that match how Indian sales floors actually work"
-        subtitle="Not a laundry list of checkboxes — each capability solves a specific leak in your lead-to-close flow."
+        subtitle="A focused toolkit where every capability solves a specific leak in your lead-to-close flow."
       />
 
       {FEATURE_CATEGORIES.map((cat) => {
@@ -33,8 +33,8 @@ export default function FeaturesPage() {
 
       <section className="mkt-section mkt-section--inset">
         <div className="mkt-inline-links">
-          <Link to="/modules">See where features live → Modules</Link>
-          <Link to="/pricing">Plans that unlock IVR & reports → Pricing</Link>
+          <Link to="/modules">See where features live - Modules</Link>
+          <Link to="/pricing">Plans that unlock IVR and reports - Pricing</Link>
         </div>
       </section>
 

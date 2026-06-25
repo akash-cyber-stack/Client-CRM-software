@@ -8,7 +8,7 @@ export default function MarketingFooter() {
         <div className="mkt-footer__brand">
           <BrandLogo size="sm" />
           <p>
-            Lead intake, IVR calls, and follow-ups in one workspace — built for teams running Google
+            Lead intake, IVR calls, and follow-ups in one premium workspace built for teams running Google
             Ads and Meta campaigns in India.
           </p>
         </div>
@@ -26,12 +26,12 @@ export default function MarketingFooter() {
         </div>
         <div>
           <h4>Built for</h4>
-          <p className="mkt-footer__muted">Agencies · Real estate · Ed-tech · Local services · B2B inside sales</p>
+          <p className="mkt-footer__muted">Agencies - Real estate - Ed-tech - Local services - B2B inside sales</p>
         </div>
       </div>
       <div className="mkt-footer__bar">
-        <p>© {new Date().getFullYear()} Sales Lead CRM</p>
-        <p className="mkt-footer__muted">GST-ready workspaces · Razorpay billing · Email OTP sign-in</p>
+        <p>(c) {new Date().getFullYear()} Sales Lead CRM</p>
+        <p className="mkt-footer__muted">GST-ready workspaces - Razorpay billing - Email OTP sign-in</p>
       </div>
     </footer>
   );

@@ -8,8 +8,8 @@ export default function ModulesPage() {
     <MarketingLayout seo={PAGE_SEO.modules}>
       <MarketingPageHero
         kicker="Architecture"
-        title="Seven modules. Zero bolt-on plugins."
-        subtitle="Everything shares the same lead record — calls, notes, follow-ups, and reports read from one source of truth."
+        title="Seven premium modules. One calm operating system."
+        subtitle="Everything shares the same lead record, so calls, notes, follow-ups, and reports read from one source of truth."
       />
 
       <div className="mkt-module-detail-list">
@@ -37,8 +37,8 @@ export default function ModulesPage() {
 
       <section className="mkt-section mkt-section--inset">
         <div className="mkt-inline-links">
-          <Link to="/features">Deep-dive on capabilities → Features</Link>
-          <Link to="/faq">Setup questions → FAQ</Link>
+          <Link to="/features">Deep-dive on capabilities - Features</Link>
+          <Link to="/faq">Setup questions - FAQ</Link>
         </div>
       </section>
 

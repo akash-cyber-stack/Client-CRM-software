@@ -37,14 +37,14 @@ export default function Landing() {
       <section className="mkt-home-hero">
         <div className="mkt-home-hero__copy">
           <p className="mkt-trial-pill">{TRIAL_HEADLINE}</p>
-          <p className="mkt-kicker">Ad leads → assigned rep → logged call → closed deal</p>
+          <p className="mkt-kicker">Ad leads - assigned rep - logged call - closed deal</p>
           <h1>
-            The sales desk built for <em>Google &amp; Meta</em> teams — not SIM dialer spreadsheets.
+            A premium sales command desk for <em>Google &amp; Meta</em> lead teams.
           </h1>
           <p className="mkt-home-hero__lead">
-            Runo-style call CRMs charge per seat and live on your phone SIM. Sales Lead CRM pulls
-            form fills from ads into one pipeline, routes them fairly, logs IVR calls on the lead
-            profile, and nags reps before follow-ups slip — with <strong>flat workspace pricing</strong>{' '}
+            Sales Lead CRM turns ad enquiries into a clean operating system: one lead vault, smart
+            routing, IVR call timelines, follow-up discipline, and manager-grade reports. Your team
+            gets a polished workspace with <strong>flat workspace pricing</strong>{' '}
             and a full <strong>10-day trial</strong> before you pay.
           </p>
           <div className="mkt-home-hero__actions">
@@ -71,27 +71,27 @@ export default function Landing() {
               <span />
               <span />
               <span />
-              <em>Lead Vault — today</em>
+              <em>Lead Vault - today</em>
             </div>
             <div className="mkt-mock-rows">
               <div className="mkt-mock-row mkt-mock-row--hot">
                 <span className="mkt-mock-pulse">92</span>
                 <div>
-                  <strong>Rahul S. · Meta — Home loan</strong>
-                  <small>Assigned · Follow-up in 2h</small>
+                  <strong>Rahul S. - Meta - Home loan</strong>
+                  <small>Assigned - Follow-up in 2h</small>
                 </div>
               </div>
               <div className="mkt-mock-row">
                 <span className="mkt-mock-pulse mkt-mock-pulse--warm">71</span>
                 <div>
-                  <strong>Priya K. · Google Ads</strong>
-                  <small>New · Round-robin queued</small>
+                  <strong>Priya K. - Google Ads</strong>
+                  <small>New - Round-robin queued</small>
                 </div>
               </div>
               <div className="mkt-mock-row">
                 <span className="mkt-mock-pulse mkt-mock-pulse--cold">44</span>
                 <div>
-                  <strong>IVR call logged · 4m 12s</strong>
+                  <strong>IVR call logged - 4m 12s</strong>
                   <small>Recording on lead timeline</small>
                 </div>
               </div>
@@ -107,10 +107,10 @@ export default function Landing() {
       <section className="mkt-section mkt-plan-showcase">
         <div className="mkt-section__head">
           <p className="mkt-kicker">Plans unlock different powers</p>
-          <h2>Pick Starter to trial — unlock IVR &amp; reports on Professional</h2>
+          <h2>Pick Starter to trial. Unlock IVR and reports on Professional.</h2>
           <p className="mkt-section__sub">
-            Like tiered CRMs, each plan gates real features. Your trial starts on the plan you choose at
-            signup.
+            Each plan is built for a real stage of your sales operation. Your trial starts on the plan
+            you choose at signup.
           </p>
         </div>
         <div className="mkt-plan-showcase__grid">
@@ -140,7 +140,7 @@ export default function Landing() {
       <section className="mkt-section mkt-problem">
         <div className="mkt-section__head mkt-section__head--left">
           <p className="mkt-kicker">Sound familiar?</p>
-          <h2>Most teams lose deals in the handoff — not the pitch.</h2>
+          <h2>Most teams lose deals in the handoff, not the pitch.</h2>
         </div>
         <ul className="mkt-problem-list">
           {HOME_PROBLEM_POINTS.map((item) => (
@@ -155,10 +155,10 @@ export default function Landing() {
       <section className="mkt-section mkt-section--inset mkt-versus">
         <div className="mkt-section__head">
           <p className="mkt-kicker">Why teams switch</p>
-          <h2>Spreadsheets vs SIM dialer CRM vs Sales Lead CRM</h2>
+          <h2>Spreadsheets vs basic dialer CRM vs Sales Lead CRM</h2>
           <p className="mkt-section__sub">
-            Honest comparison — we are not a mobile SIM auto-dialer. We are the ad-to-pipeline desk
-            Indian teams use when leads must land in one place.
+            A clearer comparison for teams that want campaign leads, calls, follow-ups, and reports
+            in one premium workspace.
           </p>
         </div>
         <div className="mkt-compare-wrap">
@@ -188,7 +188,7 @@ export default function Landing() {
       <section className="mkt-section">
         <div className="mkt-section__head">
           <p className="mkt-kicker">How teams use it</p>
-          <h2>From ad click to closed deal — without tab hopping</h2>
+          <h2>From ad click to closed deal without tab hopping</h2>
         </div>
         <ol className="mkt-workflow">
           {HOME_WORKFLOW.map((step, i) => (
@@ -202,7 +202,7 @@ export default function Landing() {
           ))}
         </ol>
         <p className="mkt-section__link">
-          <Link to="/modules">Explore all seven modules →</Link>
+          <Link to="/modules">Explore all seven modules -</Link>
         </p>
       </section>
 
@@ -210,7 +210,7 @@ export default function Landing() {
         <div className="mkt-mobile-strip__inner">
           <div className="mkt-mobile-strip__copy">
             <p className="mkt-kicker">On the move</p>
-            <h2>Mobile-ready web desk — Play Store app coming</h2>
+            <h2>Mobile-ready web desk. Play Store app coming.</h2>
             <p>
               Reps already use Sales Lead CRM from phone browsers on the floor. A native Android app is
               on our roadmap; until then you get the full responsive desk without a separate install.
@@ -229,9 +229,9 @@ export default function Landing() {
               <div className="mkt-phone-frame__screen">
                 <small>Follow-up Radar</small>
                 <strong>3 due today</strong>
-                <div className="mkt-phone-frame__row mkt-phone-frame__row--urgent">Overdue · Meta lead</div>
-                <div className="mkt-phone-frame__row">Due 4pm · Google Ads</div>
-                <div className="mkt-phone-frame__row">Pending · Callback</div>
+                <div className="mkt-phone-frame__row mkt-phone-frame__row--urgent">Overdue - Meta lead</div>
+                <div className="mkt-phone-frame__row">Due 4pm - Google Ads</div>
+                <div className="mkt-phone-frame__row">Pending - Callback</div>
               </div>
             </div>
           </div>
@@ -279,7 +279,7 @@ export default function Landing() {
         <blockquote>
           <p>&ldquo;{HOME_TESTIMONIAL.quote}&rdquo;</p>
           <footer>
-            — {HOME_TESTIMONIAL.name}, {HOME_TESTIMONIAL.role}
+            - {HOME_TESTIMONIAL.name}, {HOME_TESTIMONIAL.role}
           </footer>
         </blockquote>
       </section>
@@ -290,7 +290,7 @@ export default function Landing() {
             <p className="mkt-kicker">Pricing</p>
             <h2>{TRIAL_HEADLINE}</h2>
             <p>
-              Flat workspace billing from ₹1,299/mo — not ₹599 per rep. Upgrade when IVR and reports
+              Flat workspace billing from Rs 1,299/mo, not per-rep pricing. Upgrade when IVR and reports
               matter.
             </p>
           </div>
@@ -302,7 +302,7 @@ export default function Landing() {
 
       <MarketingCtaBand
         title="Try the full desk free for 10 days"
-        text="Create a workspace, connect your webhooks, and see if your floor keeps it open — no card required."
+        text="Create a workspace, connect your webhooks, and see if your floor keeps it open. No card required."
         primaryLabel="Start free trial"
         primaryTo="/login?mode=register"
       />

@@ -25,7 +25,7 @@ export default function FaqPage() {
       <MarketingPageHero
         kicker="Support"
         title="Questions teams ask before switching off spreadsheets"
-        subtitle="Setup, billing, webhooks, and day-to-day use — answered in plain language."
+        subtitle="Setup, billing, webhooks, and day-to-day use answered in plain language."
       />
 
       <div className="mkt-faq-list">
@@ -39,7 +39,7 @@ export default function FaqPage() {
           >
             <button type="button" onClick={() => setOpen(open === i ? -1 : i)} itemProp="name">
               {item.q}
-              <span aria-hidden="true">{open === i ? '−' : '+'}</span>
+              <span aria-hidden="true">{open === i ? '-' : '+'}</span>
             </button>
             {open === i && (
               <div itemScope itemProp="acceptedAnswer" itemType="https://schema.org/Answer">
@@ -52,9 +52,9 @@ export default function FaqPage() {
 
       <section className="mkt-section mkt-section--inset">
         <div className="mkt-inline-links">
-          <Link to="/features">Feature list →</Link>
-          <Link to="/pricing">Plan comparison →</Link>
-          <Link to="/login">Login to workspace →</Link>
+          <Link to="/features">Feature list -</Link>
+          <Link to="/pricing">Plan comparison -</Link>
+          <Link to="/login">Login to workspace -</Link>
         </div>
       </section>
 
